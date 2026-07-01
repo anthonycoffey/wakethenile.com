@@ -1,0 +1,39 @@
+---
+import SocialIcons from './SocialIcons.astro';
+import type { SocialLink } from '../lib/types';
+interface Props { socials?: SocialLink[]; }
+const { socials = [] } = Astro.props;
+---
+
+<footer class="footer-scroll">
+  <a href="/" class="footer-scroll__mark brand-mark" aria-label="Wake the Nile"></a>
+  <p class="footer-scroll__label">Follow Us on Social Media</p>
+  <SocialIcons socials={socials} size="1.25em" />
+</footer>
+
+<style>
+  .footer-scroll {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 4rem 1rem 6rem;
+    animation: wtnFadeIn 2.5s ease-in-out forwards;
+  }
+  .footer-scroll__mark {
+    width: 318px;
+    max-width: 80vw;
+    height: 81px;
+    -webkit-mask-image: url('/brand/wordmark.png');
+    mask-image: url('/brand/wordmark.png');
+  }
+  .footer-scroll__label {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 100;
+    letter-spacing: 2px;
+    line-height: 1;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+</style>

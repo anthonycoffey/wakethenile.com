@@ -1,0 +1,21 @@
+/* Wake the Nile — brand design tokens.
+   Values taken from the LIVE site's rendered CSS (global styles override the
+   theme.json defaults): gold is #ddae2d, text is gold on black. */
+:root {
+  /* Color */
+  --bg: #000000;
+  --surface: #212121; /* secondary/tertiary */
+  --accent: #ddae2d; /* gold — contrast/primary on the live site */
+  --accent-ink: #000000; /* text on a gold fill (button hover) */
+  --text: #ddae2d; /* body/headings are gold on the live site */
+  --muted: #cbb27a; /* muted gold for secondary text */
+  --border: #ddae2d; /* gold hairline borders (shows widget, etc.) */
+
+  /* Type — Martel Sans is the approved, signed-off brand face */
+  --font-sans: 'Martel Sans', system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+  /* Layout */
+  --maxw: 1100px;
+  --radius: 8px;
+}

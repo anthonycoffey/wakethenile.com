@@ -1,0 +1,28 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import CoverSection from '../components/CoverSection.astro';
+import { sanityFetch } from '../lib/sanity';
+import { allPageSlugsQuery, pageBySlugQuery } from '../lib/queries';
+import type { Page } from '../lib/types';
+
+export async function getStaticPaths() {
+  // Slugs with dedicated route files — never render them via this catch-all.
+  const RESERVED = new Set(['videos', 'shows', 'contact-us', 'lamb']);
+  const slugs = await sanityFetch<Array<{ slug: string }>>(allPageSlugsQuery, {}, []);
+  return slugs
+    .map((s) => s.slug)
+    .filter((slug) => slug && !RESERVED.has(slug))
+    .map((slug) => ({ params: { slug } }));
+}
+
+const { slug } = Astro.params;
+const page = await sanityFetch<Page | null>(pageBySlugQuery, { slug }, null);
+
+if (!page) {
+  return Astro.redirect('/404');
+}
+---
+
+<BaseLayout title={page.title} seo={page.seo} footer="fixed">
+  <CoverSection page={page} />
+</BaseLayout>

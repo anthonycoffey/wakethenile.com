@@ -1,0 +1,83 @@
+---
+import '../styles/global.css';
+import SiteHeader from '../components/SiteHeader.astro';
+import FooterHome from '../components/FooterHome.astro';
+import FooterFixed from '../components/FooterFixed.astro';
+import FooterScroll from '../components/FooterScroll.astro';
+import { sanityFetch } from '../lib/sanity';
+import { siteSettingsQuery } from '../lib/queries';
+import { urlFor } from '../lib/sanityImage';
+import type { SiteSettings, SeoFields } from '../lib/types';
+
+interface Props {
+  title?: string;
+  description?: string;
+  seo?: SeoFields;
+  /** Which footer to render. */
+  footer?: 'home' | 'fixed' | 'scroll' | 'none';
+}
+
+const { title, description, seo, footer = 'fixed' } = Astro.props;
+
+const settings = await sanityFetch<SiteSettings | null>(siteSettingsQuery, {}, null);
+const siteTitle = settings?.title ?? 'Wake the Nile';
+const nav = settings?.nav ?? [];
+const socials = settings?.socials ?? [];
+
+const metaTitle = seo?.metaTitle ?? title ?? siteTitle;
+const fullTitle = metaTitle === siteTitle ? siteTitle : `${metaTitle} · ${siteTitle}`;
+const metaDescription =
+  seo?.metaDescription ?? description ?? settings?.defaultSeo?.metaDescription ?? '';
+const ogImage = urlFor(seo?.ogImage ?? settings?.defaultSeo?.ogImage) ?? undefined;
+const noIndex = seo?.noIndex ?? false;
+const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://wakethenile.com').href;
+const ga4 = import.meta.env.PUBLIC_GA4_MEASUREMENT_ID;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    {metaDescription && <meta name="description" content={metaDescription} />}
+    <link rel="canonical" href={canonical} />
+    {noIndex && <meta name="robots" content="noindex,nofollow" />}
+
+    <meta property="og:title" content={metaTitle} />
+    {metaDescription && <meta property="og:description" content={metaDescription} />}
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    {ogImage && <meta property="og:image" content={ogImage} />}
+    <meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+
+    {
+      ga4 && (
+        <>
+          <script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${ga4}`} />
+          <script is:inline define:vars={{ ga4 }}>
+            window.dataLayer = window.dataLayer || [];
+            function gtag() {
+              dataLayer.push(arguments);
+            }
+            gtag('js', new Date());
+            gtag('config', ga4);
+          </script>
+        </>
+      )
+    }
+  </head>
+  <body>
+    <SiteHeader nav={nav} />
+
+    <main>
+      <slot />
+    </main>
+
+    {footer === 'home' && <FooterHome socials={socials} />}
+    {footer === 'fixed' && <FooterFixed socials={socials} />}
+    {footer === 'scroll' && <FooterScroll socials={socials} />}
+  </body>
+</html>

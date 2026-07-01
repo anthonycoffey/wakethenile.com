@@ -1,0 +1,125 @@
+---
+import { urlFor } from '../lib/sanityImage';
+import type { Page } from '../lib/types';
+
+interface Props {
+  page: Page;
+}
+const { page } = Astro.props;
+
+const bg = urlFor(page.coverImage) ?? undefined;
+const ov = page.overlay;
+const isDuotone = ov?.duotone === true;
+const overlayOn = !isDuotone && ov?.enabled !== false && !!ov?.color;
+const overlayColor = ov?.color ?? '#000000';
+const overlayOpacity = typeof ov?.opacity === 'number' ? ov.opacity : 0.4;
+const showWordmark = !!page.isHome;
+const hasCta = page.ctaLabel && page.ctaHref;
+---
+
+<section class="cover">
+  <!-- Background image layer -->
+  <div
+    class={`cover__bg${isDuotone ? ' is-duotone' : ''}`}
+    style={bg ? `background-image:url('${bg}')` : undefined}
+  />
+
+  <!-- Duotone SVG filter definition (hidden, 0x0) -->
+  {isDuotone && (
+    <svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+      <defs>
+        <!-- Maps dark pixels → #212121, light pixels → #ddae2d -->
+        <filter id="duotone-wtn" color-interpolation-filters="sRGB">
+          <feColorMatrix type="matrix" values="
+            0.1568 0.5274 0.0532 0 0.1294
+            0.1176 0.3954 0.0399 0 0.1294
+            0.01   0.0337 0.0034 0 0.1294
+            0      0      0      1 0
+          " />
+        </filter>
+      </defs>
+    </svg>
+  )}
+
+  <!-- Simple color overlay (non-duotone pages) -->
+  {overlayOn && (
+    <div
+      class="cover__overlay"
+      style={`background:${overlayColor}; opacity:${overlayOpacity}`}
+    />
+  )}
+
+  <div class="cover__inner">
+    {
+      showWordmark ? (
+        <div class="cover__wordmark brand-mark" role="img" aria-label="Wake the Nile" />
+      ) : (
+        <>
+          {page.heading && <h1 class="cover__heading">{page.heading}</h1>}
+          {page.subheading && <p class="cover__sub">{page.subheading}</p>}
+        </>
+      )
+    }
+    {hasCta && (
+      <a class="btn cover__cta" href={page.ctaHref}>{page.ctaLabel}</a>
+    )}
+  </div>
+</section>
+
+<style>
+  .cover {
+    position: relative;
+    min-height: 100svh;
+    display: grid;
+    place-items: center;
+    padding: 5rem 1.25rem;
+  }
+  .cover__bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    z-index: 0;
+  }
+  .cover__bg.is-duotone {
+    filter: url(#duotone-wtn);
+  }
+  .cover__overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+  .cover__inner {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    text-align: center;
+    justify-self: stretch;
+    max-width: 900px;
+    margin-inline: auto;
+  }
+  .cover__wordmark {
+    width: min(80vw, 760px);
+    aspect-ratio: 2048 / 532;
+    -webkit-mask-image: url('/brand/wordmark.png');
+    mask-image: url('/brand/wordmark.png');
+  }
+  .cover__heading {
+    color: var(--accent);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0;
+    line-height: 1;
+    font-size: clamp(3.5rem, 3rem + 4vw, 5.5rem);
+    margin: 0;
+  }
+  .cover__sub {
+    color: var(--accent);
+    font-weight: 600;
+    margin: 0;
+    font-size: clamp(1rem, 1rem + ((1vw - 0.2rem) * 0.455), 1.25rem);
+  }
+</style>

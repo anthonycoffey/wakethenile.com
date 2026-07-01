@@ -1,0 +1,94 @@
+---
+import VenueMap from './VenueMap.astro';
+import type { Show } from '../lib/types';
+
+interface Props {
+  show: Show;
+}
+const { show } = Astro.props;
+
+const dt = show.date ? new Date(show.date) : null;
+const dateStr = dt
+  ? dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+  : 'Date TBD';
+const timeStr = dt ? dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+const where = [show.city, show.state].filter(Boolean).join(', ');
+const ticketsLabel = show.ticketsLabel || 'Get Tickets';
+---
+
+<li class="show">
+  {show.venueName && <div class="show-venue-name">{show.venueName}</div>}
+  <div class="show-date-time">{dateStr}{timeStr ? ` · ${timeStr}` : ''}</div>
+  {where && <div class="show-city-state">{where}</div>}
+
+  <VenueMap location={show.location} venueName={show.venueName} />
+
+  <div class="show-tickets-link">
+    {
+      show.soldOut ? (
+        <span class="show-soldout">Sold Out</span>
+      ) : (
+        show.ticketsUrl && (
+          <a class="tickets-button" href={show.ticketsUrl} target="_blank" rel="noopener">
+            {ticketsLabel}
+          </a>
+        )
+      )
+    }
+  </div>
+</li>
+
+<style>
+  .show {
+    list-style: none;
+    text-align: center;
+    padding-top: 2rem;
+  }
+  .show:not(:last-child) {
+    padding-bottom: 2rem;
+    border-bottom: 1px dashed var(--accent);
+  }
+  .show-venue-name {
+    font-weight: 700;
+    font-size: 1em;
+    margin-bottom: 8px;
+    color: var(--accent);
+  }
+  .show-date-time {
+    color: var(--accent);
+    font-weight: bold;
+    font-size: 120%;
+  }
+  .show-city-state {
+    color: var(--accent);
+    margin-top: 4px;
+  }
+  .show-tickets-link {
+    margin: 12px 0 8px;
+    display: flex;
+    justify-content: center;
+  }
+  /* outline tickets button (plugin .tickets-button) */
+  .tickets-button {
+    color: var(--accent);
+    text-transform: uppercase;
+    padding: 8px 16px;
+    text-decoration: none;
+    font-weight: 500;
+    letter-spacing: 2px;
+    background: transparent;
+    border: 1px solid var(--accent);
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  .tickets-button:hover {
+    background: var(--accent);
+    color: var(--accent-ink);
+    text-decoration: none;
+  }
+  .show-soldout {
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+  }
+</style>

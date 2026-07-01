@@ -1,0 +1,106 @@
+---
+/**
+ * Embeds a HubSpot v2 form — a faithful, free 1:1 of the WordPress LeadIn
+ * shortcodes the live site uses (portal 243317127).
+ *
+ * onFormReady cleans up page-builder residue that was migrated from WordPress:
+ * - Removes spacer <p>&nbsp;</p> elements
+ * - Promotes the "Connect With Us" <p><strong> title to a proper <h1>
+ *   with no inline styles (global tokens handle all styling)
+ */
+interface Props {
+  formId: string;
+  portalId?: string;
+  region?: string;
+}
+
+const { formId, portalId = '243317127', region = 'na1' } = Astro.props;
+const domId = `hs-form-${formId}`;
+---
+
+<div class="hs-form-wrap">
+  <div id={domId}></div>
+  <noscript>
+    <p>Please enable JavaScript to load the form, or email us directly.</p>
+  </noscript>
+</div>
+
+<script
+  is:inline
+  define:vars={{ formId, portalId, region, domId }}
+  src="https://js.hsforms.net/forms/embed/v2.js"
+  onload={`
+    if (window.hbspt) {
+      window.hbspt.forms.create({
+        portalId: ${JSON.stringify(portalId)},
+        formId: ${JSON.stringify(formId)},
+        region: ${JSON.stringify(region)},
+        target: '#' + ${JSON.stringify(domId)},
+        onFormReady: function() {
+          var container = document.getElementById(${JSON.stringify(domId)});
+          if (!container) return;
+
+          // Remove spacer paragraphs (contain only &nbsp; or whitespace)
+          Array.from(container.querySelectorAll('p')).forEach(function(p) {
+            if (p.textContent.replace(/[\\s\\u00a0]/g, '') === '') {
+              p.remove();
+            }
+          });
+
+          // Replace badly-tagged title <p> (from page-builder migration) with a clean <h1>
+          Array.from(container.querySelectorAll('p')).forEach(function(p) {
+            var strong = p.querySelector('strong');
+            if (strong && strong.textContent.trim()) {
+              var h1 = document.createElement('h1');
+              h1.className = 'form-title';
+              h1.textContent = strong.textContent.trim();
+              p.replaceWith(h1);
+            }
+          });
+        }
+      });
+    }
+  `}
+></script>
+
+<style>
+  .hs-form-wrap {
+    width: 100%;
+    max-width: 640px;
+    margin-inline: auto;
+    text-align: left;
+  }
+  /* Page-builder title promoted to h1 — global tokens only, no inline styles */
+  .hs-form-wrap :global(.form-title) {
+    text-align: center;
+    color: var(--accent);
+    font-size: clamp(2rem, 1.5rem + 3vw, 3.5rem);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.5rem;
+  }
+  /* HubSpot injects its own markup; nudge it toward the dark theme. */
+  .hs-form-wrap :global(label) {
+    color: var(--text);
+  }
+  .hs-form-wrap :global(input),
+  .hs-form-wrap :global(textarea),
+  .hs-form-wrap :global(select) {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.6rem 0.75rem;
+    width: 100%;
+  }
+  .hs-form-wrap :global(.hs-button) {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: 0;
+    border-radius: var(--radius);
+    font-weight: 800;
+    padding: 0.7rem 1.25rem;
+    cursor: pointer;
+  }
+</style>

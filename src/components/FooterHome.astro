@@ -1,0 +1,35 @@
+---
+import SocialIcons from './SocialIcons.astro';
+import type { SocialLink } from '../lib/types';
+interface Props { socials?: SocialLink[]; }
+const { socials = [] } = Astro.props;
+---
+
+<section class="footer-home">
+  <p class="footer-home__label">Follow Us on Social Media</p>
+  <SocialIcons socials={socials} size="1.25em" />
+</section>
+
+<style>
+  .footer-home {
+    position: fixed;
+    bottom: 2%;
+    left: 0;
+    width: 100%;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    animation: wtnFadeIn 1s ease-in-out forwards;
+  }
+  .footer-home__label {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 100;
+    letter-spacing: 3px;
+    line-height: 1;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+</style>

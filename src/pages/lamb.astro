@@ -1,0 +1,25 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import HubSpotForm from '../components/HubSpotForm.astro';
+---
+
+<BaseLayout title="Lamb" description="Lamb intake form." footer="scroll">
+  <section class="form-page">
+    <h1 class="form-page__title">Lamb</h1>
+    <HubSpotForm formId="2df66fd1-1987-4530-be0f-fe0d15ebe873" />
+  </section>
+</BaseLayout>
+
+<style>
+  .form-page {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: calc(12vh + 2rem) 1.25rem 2rem;
+  }
+  .form-page__title {
+    text-align: center;
+    color: var(--accent);
+    font-size: clamp(2rem, 1.5rem + 3vw, 3.5rem);
+    margin-bottom: 1.5rem;
+  }
+</style>

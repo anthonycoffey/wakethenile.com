@@ -1,0 +1,23 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import VideoCoverflow from '../components/VideoCoverflow.tsx';
+import { sanityFetch } from '../lib/sanity';
+import { videosQuery } from '../lib/queries';
+import { toCoverflowItems } from '../lib/coverflow';
+import type { Video } from '../lib/types';
+
+const videos = toCoverflowItems(await sanityFetch<Video[]>(videosQuery, {}, []));
+---
+
+<BaseLayout title="Videos" description="Music videos from Wake the Nile." footer="scroll">
+  <section class="videos">
+    <VideoCoverflow client:visible videos={videos} />
+  </section>
+</BaseLayout>
+
+<style>
+  .videos {
+    padding: 7rem 0 3rem;
+    overflow-x: hidden;
+  }
+</style>

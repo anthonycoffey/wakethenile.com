@@ -1,0 +1,93 @@
+@import 'tailwindcss';
+
+/* Self-hosted Martel Sans (approved brand font) */
+@import '@fontsource/martel-sans/300.css';
+@import '@fontsource/martel-sans/400.css';
+@import '@fontsource/martel-sans/600.css';
+@import '@fontsource/martel-sans/700.css';
+@import '@fontsource/martel-sans/800.css';
+
+@import './tokens.css';
+
+/* Expose brand tokens to Tailwind v4 utilities */
+@theme {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-accent: var(--accent);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --font-sans: var(--font-sans);
+}
+
+@layer base {
+  html {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+  }
+
+  a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  h1, h2, h3, h4 {
+    font-weight: 700;
+    line-height: 1.125;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    margin: 0;
+  }
+
+  img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+}
+
+@keyframes wtnFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Gold-tinted brand mark: uses a transparent PNG silhouette as a mask and
+   fills it with the gold accent (matches the live site's duotone effect). */
+.brand-mark {
+  background-color: var(--accent);
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+/* Outline brand button — migrated from the live site (.is-style-outline). */
+.btn {
+  display: inline-block;
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  background: transparent;
+  border-radius: 100px;
+  text-transform: uppercase;
+  font-weight: 800;
+  font-size: clamp(1rem, 1rem + ((1vw - 0.2rem) * 0.455), 1.25rem);
+  padding: 0.667em 1.33em;
+  letter-spacing: 1px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+.btn:hover {
+  background: var(--accent);
+  color: var(--accent-ink);
+  text-decoration: none;
+}

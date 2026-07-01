@@ -1,0 +1,46 @@
+---
+import ShowCard from './ShowCard.astro';
+import type { Show } from '../lib/types';
+
+interface Props {
+  upcoming?: Show[];
+  past?: Show[];
+}
+const { upcoming = [], past = [] } = Astro.props;
+const shows = [...upcoming, ...past];
+---
+
+{
+  shows.length === 0 ? (
+    <p class="showlist-empty">No shows announced right now — check back soon.</p>
+  ) : (
+    <div class="showlist-wrapper">
+      <ul>
+        {shows.map((show) => <ShowCard show={show} />)}
+      </ul>
+    </div>
+  )
+}
+
+<style>
+  .showlist-wrapper {
+    border: 1px solid var(--accent);
+    padding: 0 3rem 3rem;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+  .showlist-wrapper ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .showlist-empty {
+    text-align: center;
+    color: var(--muted);
+  }
+  @media (max-width: 600px) {
+    .showlist-wrapper {
+      padding: 0 1.25rem 2rem;
+    }
+  }
+</style>

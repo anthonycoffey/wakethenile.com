@@ -1,0 +1,27 @@
+# build output
+dist/
+.astro/
+
+# dependencies
+node_modules/
+studio/node_modules/
+
+# the WordPress export — large, never deployed
+_archive/
+
+# env
+.env
+.env.*
+!.env.example
+
+# cloudflare / wrangler
+.wrangler/
+.dev.vars
+
+# misc
+.DS_Store
+*.log
+.vscode/
+
+# large video assets — served by Pages, not tracked in git
+public/videos/

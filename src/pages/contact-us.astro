@@ -1,0 +1,18 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import HubSpotForm from '../components/HubSpotForm.astro';
+---
+
+<BaseLayout title="Contact Us" description="Get in touch with Wake the Nile." footer="scroll">
+  <section class="form-page">
+    <HubSpotForm formId="62507361-f1af-437d-8acc-b0e12ebacf6d" />
+  </section>
+</BaseLayout>
+
+<style>
+  .form-page {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: calc(7vh + 3rem) 1.25rem 2rem;
+  }
+</style>

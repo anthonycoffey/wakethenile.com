@@ -1,0 +1,83 @@
+---
+import type { NavItem } from '../lib/types';
+
+interface Props {
+  nav?: NavItem[];
+}
+const { nav = [] } = Astro.props;
+
+const items: NavItem[] =
+  nav.length > 0
+    ? nav
+    : [
+        { label: 'Music', href: '/music' },
+        { label: 'Videos', href: '/videos' },
+        { label: 'Connect', href: '/connect' },
+        { label: 'Shows', href: '/shows' },
+      ];
+---
+
+<header class="site-header">
+  <a class="site-header__logo brand-mark" href="/" aria-label="Wake the Nile"></a>
+  <nav class="site-header__nav">
+    {items.map((item) => <a href={item.href}>{item.label}</a>)}
+  </nav>
+</header>
+
+<style>
+  .site-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2vh 5vw;
+    /* transparent overlay — sits on top of the 100vh section, no background */
+    background: transparent;
+    box-sizing: border-box;
+  }
+  .site-header__logo {
+    display: block;
+    width: 66px;
+    height: 64px;
+    -webkit-mask-image: url('/brand/icon.png');
+    mask-image: url('/brand/icon.png');
+    flex: 0 0 auto;
+  }
+  .site-header__nav {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 1.4rem;
+    flex-wrap: wrap;
+  }
+  .site-header__nav a {
+    color: var(--accent);
+    font-family: var(--font-sans);
+    font-weight: 700;
+    text-transform: uppercase;
+    text-decoration: none;
+    line-height: 1.2;
+    letter-spacing: -0.5px;
+    font-size: clamp(1.75rem, 1.7rem + 0.3vw, 2rem);
+  }
+  .site-header__nav a:hover {
+    text-decoration: underline;
+    text-decoration-thickness: 0.0625em;
+    text-underline-offset: 0.15em;
+  }
+  @media (max-width: 600px) {
+    .site-header {
+      flex-direction: column;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .site-header__nav {
+      justify-content: center;
+      gap: 1rem;
+    }
+  }
+</style>

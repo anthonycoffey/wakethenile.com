@@ -1,0 +1,69 @@
+---
+import type { Geopoint } from '../lib/types';
+
+interface Props {
+  location?: Geopoint;
+  venueName?: string;
+}
+
+const { location, venueName } = Astro.props;
+const apiKey = import.meta.env.PUBLIC_GOOGLE_MAPS_API_KEY;
+
+const hasLoc = !!(location && typeof location.lat === 'number' && typeof location.lng === 'number');
+const directionsUrl = hasLoc
+  ? `https://www.google.com/maps/dir/?api=1&destination=${location!.lat},${location!.lng}`
+  : undefined;
+// Use the keyed Embed API when available; otherwise fall back to a plain maps link.
+const embedUrl =
+  hasLoc && apiKey
+    ? `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${location!.lat},${location!.lng}&zoom=14`
+    : undefined;
+---
+
+{
+  hasLoc && (
+    <div class="venue-map">
+      {embedUrl ? (
+        <iframe
+          src={embedUrl}
+          title={venueName ? `Map: ${venueName}` : 'Venue map'}
+          loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade"
+          allowfullscreen
+        />
+      ) : null}
+      {directionsUrl && (
+        <div class="map-directions">
+          <a href={directionsUrl} target="_blank" rel="noopener">Get Directions</a>
+        </div>
+      )}
+    </div>
+  )
+}
+
+<style>
+  /* matches the plugin .show-google-map styles */
+  .venue-map {
+    margin: 20px 0;
+  }
+  .venue-map iframe {
+    width: 100%;
+    height: 200px;
+    border: 0;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    display: block;
+  }
+  .map-directions {
+    margin-top: 0.5rem;
+  }
+  .map-directions a {
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 0.9em;
+  }
+  .map-directions a:hover {
+    text-decoration: underline;
+  }
+</style>

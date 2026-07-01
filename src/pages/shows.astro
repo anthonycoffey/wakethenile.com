@@ -1,0 +1,74 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ShowList from '../components/ShowList.astro';
+import { sanityFetch } from '../lib/sanity';
+import { upcomingShowsQuery, pastShowsQuery, showsPageQuery } from '../lib/queries';
+import { urlFor } from '../lib/sanityImage';
+import type { Show, Page } from '../lib/types';
+
+const [upcoming, past, config] = await Promise.all([
+  sanityFetch<Show[]>(upcomingShowsQuery, {}, []),
+  sanityFetch<Show[]>(pastShowsQuery, {}, []),
+  sanityFetch<Page | null>(showsPageQuery, {}, null),
+]);
+
+const bg = config?.coverImage ? urlFor(config.coverImage) : undefined;
+const ov = config?.overlay;
+const overlayOn = ov?.enabled !== false && !!ov?.color;
+const overlayColor = ov?.color ?? '#212121';
+const overlayOpacity = typeof ov?.opacity === 'number' ? ov.opacity : 0.5;
+---
+
+<BaseLayout title="Shows" description="Tour dates and live shows." footer="scroll">
+  <section class="shows" style={bg ? `--cover-bg: url('${bg}')` : undefined}>
+    {bg && <div class="shows__bg" />}
+    {bg && overlayOn && (
+      <div class="shows__overlay" style={`background:${overlayColor}; opacity:${overlayOpacity}`} />
+    )}
+    <div class="shows__content">
+      <h1 class="shows__title">Shows</h1>
+      <hr class="shows__divider" />
+      <ShowList upcoming={upcoming} past={past} />
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .shows {
+    position: relative;
+    min-height: 100svh;
+    padding-bottom: 4rem;
+  }
+  .shows__bg {
+    position: fixed;
+    inset: 0;
+    background-image: var(--cover-bg);
+    background-size: cover;
+    background-position: center;
+    z-index: -2;
+  }
+  .shows__overlay {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+  }
+  .shows__content {
+    position: relative;
+    z-index: 1;
+    padding: 40vh 1.25rem 2rem;
+  }
+  .shows__title {
+    text-align: center;
+    color: var(--accent);
+    font-size: clamp(3.5rem, 3rem + 4vw, 5.5rem);
+    margin-bottom: 1rem;
+    letter-spacing: -0.02em;
+  }
+  .shows__divider {
+    border: none;
+    border-top: 1px solid var(--accent);
+    margin: 0 auto 2rem;
+    max-width: 640px;
+    opacity: 0.5;
+  }
+</style>
