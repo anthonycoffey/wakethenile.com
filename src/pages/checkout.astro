@@ -1,0 +1,36 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Checkout" description="Checkout." footer="scroll">
+  <section class="checkout-stub">
+    <h1>Checkout</h1>
+    <p>Secure Stripe checkout is being wired up next. Your cart is saved.</p>
+    <a class="checkout-stub__back" href="/cart">← Back to cart</a>
+  </section>
+</BaseLayout>
+
+<style>
+  .checkout-stub {
+    max-width: 640px;
+    margin-inline: auto;
+    padding: calc(12vh + 4.5rem) 1.5rem 6rem;
+    text-align: center;
+  }
+  .checkout-stub h1 {
+    color: var(--accent);
+    font-size: clamp(2.25rem, 1.8rem + 2.5vw, 3.25rem);
+    margin-bottom: 1rem;
+  }
+  .checkout-stub p {
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 2rem;
+  }
+  .checkout-stub__back {
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-size: 0.8rem;
+  }
+</style>

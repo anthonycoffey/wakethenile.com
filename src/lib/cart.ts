@@ -69,6 +69,12 @@ export function cartSubtotal(items: CartItem[] = getCart()): number {
   return items.reduce((sum, i) => sum + i.unitPrice * i.qty, 0);
 }
 
+/** Ask the (globally-mounted) cart drawer to open. */
+export function openCart(): void {
+  if (!hasWindow()) return;
+  window.dispatchEvent(new CustomEvent('wtn:cart:open'));
+}
+
 /** Subscribe to cart changes; returns an unsubscribe fn. */
 export function onCartChange(cb: (items: CartItem[]) => void): () => void {
   if (!hasWindow()) return () => {};

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { addItem } from '../lib/cart';
+import { addItem, openCart } from '../lib/cart';
 import { formatPrice } from '../lib/format';
 
 /** Serializable variant passed from the Astro page. */
@@ -67,6 +67,7 @@ export default function ProductPurchase({
       image,
     });
     setAdded(true);
+    openCart();
     window.setTimeout(() => setAdded(false), 2500);
   }
 

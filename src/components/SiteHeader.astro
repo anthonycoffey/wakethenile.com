@@ -1,5 +1,6 @@
 ---
 import type { NavItem } from '../lib/types';
+import Cart from './Cart.tsx';
 
 interface Props {
   nav?: NavItem[];
@@ -21,6 +22,7 @@ const items: NavItem[] =
   <a class="site-header__logo brand-mark" href="/" aria-label="Wake the Nile"></a>
   <nav class="site-header__nav">
     {items.map((item) => <a href={item.href}>{item.label}</a>)}
+    <Cart client:load />
   </nav>
 </header>
 
