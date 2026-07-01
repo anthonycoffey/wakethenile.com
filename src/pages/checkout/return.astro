@@ -1,60 +1,11 @@
 ---
-export const prerender = false;
-
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { getEnv } from '../../lib/env';
-import { getStripe } from '../../lib/stripe';
-
-const env = getEnv(Astro.locals);
-const sessionId = Astro.url.searchParams.get('session_id');
-
-let status: 'complete' | 'open' | 'error' | 'missing' = 'missing';
-let email: string | null = null;
-
-if (sessionId && env.STRIPE_SECRET_KEY) {
-  try {
-    const stripe = getStripe(env.STRIPE_SECRET_KEY);
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
-    email = session.customer_details?.email ?? null;
-    status = session.status === 'complete' ? 'complete' : 'open';
-  } catch (err) {
-    console.error('[checkout/return] retrieve failed:', err);
-    status = 'error';
-  }
-}
-
-const isSuccess = status === 'complete';
+import CheckoutReturn from '../../components/CheckoutReturn.tsx';
 ---
 
-<BaseLayout title={isSuccess ? 'Order confirmed' : 'Checkout'} footer="scroll">
+<BaseLayout title="Order" footer="scroll">
   <section class="return">
-    {isSuccess ? (
-      <>
-        <h1 class="return__title">Thank you!</h1>
-        <p class="return__lead">Your order is confirmed{email ? ` — a receipt is on its way to ${email}.` : '.'}</p>
-        <p class="return__sub">We’ll email you when it ships.</p>
-        <a class="btn" href="/shop">Continue shopping</a>
-        <script is:inline>
-          // Clear the local cart now that the order is placed.
-          try {
-            localStorage.removeItem('wtn_cart_v1');
-            window.dispatchEvent(new CustomEvent('wtn:cart', { detail: [] }));
-          } catch (e) {}
-        </script>
-      </>
-    ) : status === 'open' ? (
-      <>
-        <h1 class="return__title">Payment processing</h1>
-        <p class="return__lead">Your payment is still being processed. This can take a moment.</p>
-        <a class="btn" href="/cart">Back to cart</a>
-      </>
-    ) : (
-      <>
-        <h1 class="return__title">Something went wrong</h1>
-        <p class="return__lead">We couldn’t confirm your order. If you were charged, contact us and we’ll sort it out.</p>
-        <a class="btn" href="/cart">Back to cart</a>
-      </>
-    )}
+    <CheckoutReturn client:load />
   </section>
 </BaseLayout>
 
@@ -65,18 +16,34 @@ const isSuccess = status === 'complete';
     padding: calc(12vh + 4.5rem) 1.25rem 6rem;
     text-align: center;
   }
-  .return__title {
+  .return :global(.return__title) {
     color: var(--accent);
     font-size: clamp(2.25rem, 1.8rem + 2.5vw, 3.5rem);
     margin-bottom: 1rem;
   }
-  .return__lead {
+  .return :global(.return__lead) {
     color: var(--accent);
     font-size: 1.1rem;
     margin-bottom: 0.5rem;
   }
-  .return__sub {
+  .return :global(.return__sub) {
     color: var(--muted);
     margin-bottom: 2rem;
+  }
+  .return :global(.return__btn) {
+    display: inline-block;
+    border: 2px solid var(--accent);
+    color: var(--accent);
+    border-radius: 100px;
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 1px;
+    padding: 0.7rem 1.4rem;
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+  .return :global(.return__btn:hover) {
+    background: var(--accent);
+    color: var(--accent-ink);
+    text-decoration: none;
   }
 </style>
