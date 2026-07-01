@@ -11,7 +11,7 @@ const videos = toCoverflowItems(await sanityFetch<Video[]>(videosQuery, {}, []))
 
 <BaseLayout title="Videos" description="Music videos from Wake the Nile." footer="scroll">
   <section class="videos">
-    <VideoCoverflow client:visible videos={videos} />
+    <VideoCoverflow client:load videos={videos} />
   </section>
 </BaseLayout>
 
