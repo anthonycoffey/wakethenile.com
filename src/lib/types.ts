@@ -102,6 +102,9 @@ export interface Product {
   taxCode?: string;
   soldOut?: boolean;
   variants?: ProductVariant[];
+  /** Dereferenced category title (for /shop filters). */
+  category?: string;
+  tags?: string[];
   seo?: SeoFields;
 }
 

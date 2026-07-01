@@ -14,6 +14,7 @@ import {release} from './documents/release'
 import {product} from './documents/product'
 import {order} from './documents/order'
 import {commerceSettings} from './documents/commerceSettings'
+import {productCategory} from './documents/productCategory'
 
 export const schemaTypes = [
   // objects
@@ -31,4 +32,5 @@ export const schemaTypes = [
   product,
   order,
   commerceSettings,
+  productCategory,
 ]

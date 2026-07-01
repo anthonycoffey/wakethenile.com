@@ -17,9 +17,14 @@ export default function VideoCoverflow({ videos }: Props) {
   const videoRefs = useRef<Array<HTMLVideoElement | null>>([]);
   const [muted, setMuted] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
+  // Mirror `muted` in a ref so the (per-render) video ref callback applies the
+  // CURRENT state instead of hard-resetting to muted — otherwise paginating to
+  // a new slide re-mutes it right after we unmute.
+  const mutedRef = useRef(true);
 
   // Sync muted state to DOM imperatively — React's muted prop doesn't re-apply on updates.
   useEffect(() => {
+    mutedRef.current = muted;
     videoRefs.current.forEach((vid) => {
       if (vid) vid.muted = muted;
     });
@@ -29,7 +34,7 @@ export default function VideoCoverflow({ videos }: Props) {
     videoRefs.current.forEach((vid, i) => {
       if (!vid) return;
       if (i === active) {
-        vid.muted = muted;
+        vid.muted = mutedRef.current;
         const p = vid.play();
         if (p && typeof p.catch === 'function') p.catch(() => {});
       } else {
@@ -86,7 +91,7 @@ export default function VideoCoverflow({ videos }: Props) {
                 <video
                   ref={(el) => {
                     videoRefs.current[i] = el;
-                    if (el) el.muted = true;
+                    if (el) el.muted = mutedRef.current;
                   }}
                   src={v.src}
                   poster={v.poster}
@@ -103,10 +108,10 @@ export default function VideoCoverflow({ videos }: Props) {
               )}
               {muted && !v.streamSrc && i === activeIndex && (
                 <button className="coverflow__unmute" onClick={unmute} type="button" aria-label="Unmute video">
-                  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="46" height="46" aria-hidden="true">
                     <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
                   </svg>
-                  <span>Tap to unmute</span>
+                  <span>Tap to Unmute</span>
                 </button>
               )}
             </div>
@@ -154,30 +159,30 @@ export default function VideoCoverflow({ videos }: Props) {
           border: 0;
           display: block;
         }
+        /* Full-cover, dead-center tap target — the whole video unmutes. */
         .coverflow__unmute {
           position: absolute;
-          bottom: 0.75rem;
-          right: 0.75rem;
+          inset: 0;
           display: flex;
+          flex-direction: column;
           align-items: center;
-          gap: 0.35rem;
-          background: rgba(0,0,0,0.72);
+          justify-content: center;
+          gap: 0.55rem;
+          background: transparent;
           color: #fff;
           border: none;
-          border-radius: 999px;
-          padding: 0.35rem 0.75rem 0.35rem 0.55rem;
-          font-size: 0.7rem;
-          font-weight: 700;
-          letter-spacing: 0.5px;
-          text-transform: uppercase;
           cursor: pointer;
           font-family: inherit;
-          backdrop-filter: blur(6px);
-          -webkit-backdrop-filter: blur(6px);
+          font-size: 0.82rem;
+          font-weight: 700;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+          text-shadow: 0 2px 10px rgba(0,0,0,0.75);
         }
-        .coverflow__unmute:hover {
-          background: rgba(0,0,0,0.9);
+        .coverflow__unmute svg {
+          filter: drop-shadow(0 2px 10px rgba(0,0,0,0.65));
         }
+        .coverflow__unmute:hover svg { opacity: 0.85; }
         .coverflow__title {
           margin: 0.85rem 0 0;
           color: var(--text);

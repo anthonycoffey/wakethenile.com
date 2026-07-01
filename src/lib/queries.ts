@@ -53,6 +53,7 @@ const VARIANT = `{ label, sku, price, stock }`;
 // Grid card: enough to render a tile + a derived "from" price and stock state.
 export const allProductsQuery = `*[_type == "product" && ${NOT_DRAFT} && active == true] | order(title asc){
   _id, title, "slug": slug.current, images, price, soldOut,
+  "category": category->title, tags,
   variants[]${VARIANT},
   "fromPrice": coalesce(price, math::min(variants[].price)),
   "inStock": soldOut != true && (

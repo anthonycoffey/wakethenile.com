@@ -436,3 +436,143 @@
     text-align: left;
   }
 }
+
+/* ============================================================
+   Shop browser — category filters, product grid, pagination
+   (React island → styles live here, not scoped).
+   ============================================================ */
+.shopb__filters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-bottom: 2.5rem;
+}
+.shopb__filter {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 100px;
+  padding: 0.5rem 1.1rem;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.shopb__filter:hover {
+  border-color: var(--accent);
+}
+.shopb__filter.is-active {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+
+.shopb__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 3rem 2rem;
+}
+.shopb__card {
+  display: block;
+  color: var(--accent);
+  text-decoration: none;
+  text-align: center;
+}
+.shopb__media {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  background: #111;
+  overflow: hidden;
+  margin-bottom: 0.9rem;
+}
+.shopb__media img,
+.shopb__ph {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.shopb__media img {
+  transition: transform 0.5s ease;
+}
+.shopb__card:hover .shopb__media img {
+  transform: scale(1.05);
+}
+.shopb__ph {
+  background: repeating-linear-gradient(45deg, #141414, #141414 12px, #1a1a1a 12px, #1a1a1a 24px);
+}
+.shopb__badge {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  background: rgba(0, 0, 0, 0.8);
+  color: var(--accent);
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  padding: 0.3rem 0.6rem;
+}
+.shopb__title {
+  margin: 0;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.95rem;
+  line-height: 1.3;
+}
+.shopb__price {
+  margin: 0.3rem 0 0;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.shopb__empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 4rem 0;
+}
+
+.shopb__pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-top: 3.5rem;
+}
+.shopb__pagebtn {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 100px;
+  padding: 0.6rem 1.2rem;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+.shopb__pagebtn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.shopb__pagebtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.shopb__pageinfo {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.8rem;
+}
+@media (max-width: 520px) {
+  .shopb__grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem 1rem;
+  }
+}

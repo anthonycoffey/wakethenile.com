@@ -87,6 +87,20 @@ export const product = defineType({
         'Stripe Tax product tax code (e.g. txcd_99999999 general goods, txcd_30011000 apparel). ' +
         'Falls back to the store default when blank.',
     }),
+    defineField({
+      name: 'category',
+      title: 'Category',
+      type: 'reference',
+      to: [{type: 'productCategory'}],
+      description: 'Powers the /shop filters.',
+    }),
+    defineField({
+      name: 'tags',
+      title: 'Tags',
+      type: 'array',
+      of: [defineArrayMember({type: 'string'})],
+      options: {layout: 'tags'},
+    }),
     defineField({name: 'soldOut', title: 'Sold out (manual override)', type: 'boolean', initialValue: false}),
     defineField({name: 'seo', title: 'SEO', type: 'seo'}),
   ],

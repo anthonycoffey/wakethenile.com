@@ -1,11 +1,25 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import ProductGrid from '../components/ProductGrid.astro';
+import ShopBrowser from '../components/ShopBrowser.tsx';
+import type { BrowserProduct } from '../components/ShopBrowser.tsx';
 import { sanityFetch } from '../lib/sanity';
 import { allProductsQuery } from '../lib/queries';
+import { urlForWidth } from '../lib/sanityImage';
 import type { ProductCardData } from '../lib/types';
 
 const products = await sanityFetch<ProductCardData[]>(allProductsQuery, {}, []);
+
+// Resolve image URLs server-side (the hydrated island has no Sanity creds).
+const items: BrowserProduct[] = products.map((p) => ({
+  id: p._id,
+  slug: p.slug ?? '',
+  title: p.title ?? '',
+  image: urlForWidth(p.images?.[0], 800) ?? undefined,
+  fromPrice: p.fromPrice,
+  inStock: p.inStock !== false,
+  category: p.category,
+  tags: p.tags,
+}));
 const count = products.length;
 ---
 
@@ -15,7 +29,7 @@ const count = products.length;
       <h1 class="shop__title">Shop</h1>
       <p class="shop__sub">{count > 0 ? `${count} item${count === 1 ? '' : 's'}` : 'Official merch'}</p>
     </header>
-    <ProductGrid products={products} />
+    <ShopBrowser client:load products={items} />
   </section>
 </BaseLayout>
 
@@ -27,11 +41,12 @@ const count = products.length;
   }
   .shop__head {
     text-align: center;
-    margin-bottom: 3.5rem;
+    margin-bottom: 3rem;
   }
+  /* Consistent with the Connect/Shows page titles. */
   .shop__title {
     color: var(--accent);
-    font-size: clamp(2.5rem, 2rem + 3vw, 4rem);
+    font-size: clamp(3.5rem, 3rem + 4vw, 5.5rem);
     letter-spacing: -0.02em;
   }
   .shop__sub {
