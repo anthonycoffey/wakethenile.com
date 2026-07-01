@@ -17,7 +17,7 @@ const { slug } = Astro.params;
 const product = await sanityFetch<Product | null>(productBySlugQuery, { slug }, null);
 
 if (!product) {
-  return Astro.redirect('/shop');
+  return Astro.redirect('/merch');
 }
 
 const gallery = (product.images ?? [])
@@ -36,7 +36,7 @@ const descriptionHtml = renderPortableText(product.description);
 
 <BaseLayout title={product.title} seo={product.seo} footer="scroll">
   <section class="pdp">
-    <a class="pdp__back" href="/shop">← Back to Shop</a>
+    <a class="pdp__back" href="/merch">← Back to Merch</a>
 
     <div class="pdp__grid">
       <div class="pdp__gallery">

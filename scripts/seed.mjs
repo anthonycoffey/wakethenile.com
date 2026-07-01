@@ -59,7 +59,7 @@ async function main() {
       { _key: key(), label: 'Videos', href: '/videos' },
       { _key: key(), label: 'Connect', href: '/connect' },
       { _key: key(), label: 'Shows', href: '/shows' },
-      { _key: key(), label: 'Shop', href: '/shop' },
+      { _key: key(), label: 'Merch', href: '/merch' },
     ],
     socials: [
       { _key: key(), platform: 'Instagram', url: 'https://www.instagram.com/wakethenile/' },

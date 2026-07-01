@@ -19,7 +19,7 @@ export default function CartPage() {
     return (
       <div className="cartpage__empty">
         <p>Your cart is empty.</p>
-        <a className="cartpage__shoplink" href="/shop">
+        <a className="cartpage__shoplink" href="/merch">
           Shop merch →
         </a>
       </div>
@@ -68,7 +68,7 @@ export default function CartPage() {
         <a className="cartpage__checkout" href="/checkout">
           Checkout
         </a>
-        <a className="cartpage__continue" href="/shop">
+        <a className="cartpage__continue" href="/merch">
           Continue shopping
         </a>
       </aside>

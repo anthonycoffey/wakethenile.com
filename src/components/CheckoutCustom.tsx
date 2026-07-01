@@ -203,7 +203,7 @@ export default function CheckoutCustom({ publishableKey }: Props) {
   if (ui === 'empty')
     return (
       <p className="checkout__msg">
-        Your cart is empty. <a href="/shop">Shop merch →</a>
+        Your cart is empty. <a href="/merch">Shop merch →</a>
       </p>
     );
   if (ui === 'error')

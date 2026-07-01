@@ -69,7 +69,7 @@ export default function Cart() {
             {items.length === 0 ? (
               <div className="cartdrawer__empty">
                 <p>Your cart is empty.</p>
-                <a className="cartdrawer__shoplink" href="/shop" onClick={() => setOpen(false)}>
+                <a className="cartdrawer__shoplink" href="/merch" onClick={() => setOpen(false)}>
                   Shop merch →
                 </a>
               </div>

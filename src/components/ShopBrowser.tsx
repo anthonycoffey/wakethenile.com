@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatPrice } from '../lib/format';
 
 export interface BrowserProduct {
@@ -23,56 +23,95 @@ export default function ShopBrowser({ products }: { products: BrowserProduct[] }
     return [...set].sort();
   }, [products]);
 
-  const [category, setCategory] = useState('All');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  // Close the filter dropdown when clicking outside it.
+  useEffect(() => {
+    if (!open) return;
+    function onDown(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [open]);
 
   const filtered = useMemo(
-    () => (category === 'All' ? products : products.filter((p) => p.category === category)),
-    [products, category],
+    () =>
+      selected.size === 0
+        ? products
+        : products.filter((p) => p.category && selected.has(p.category)),
+    [products, selected],
   );
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const current = Math.min(page, pageCount);
   const start = (current - 1) * PAGE_SIZE;
   const visible = filtered.slice(start, start + PAGE_SIZE);
+  const count = filtered.length;
 
-  function pick(c: string) {
-    setCategory(c);
+  function toggle(c: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(c)) next.delete(c);
+      else next.add(c);
+      return next;
+    });
+    setPage(1);
+  }
+  function clearAll() {
+    setSelected(new Set());
     setPage(1);
   }
 
   return (
     <>
-      {categories.length > 0 && (
-        <div className="shopb__filters" role="tablist" aria-label="Filter products by category">
-          <button
-            type="button"
-            className={`shopb__filter${category === 'All' ? ' is-active' : ''}`}
-            aria-pressed={category === 'All'}
-            onClick={() => pick('All')}
-          >
-            All
-          </button>
-          {categories.map((c) => (
+      <div className="shopb__bar">
+        <span className="shopb__count">
+          {count} item{count === 1 ? '' : 's'}
+        </span>
+
+        {categories.length > 0 && (
+          <div className="shopb__filter-wrap" ref={wrapRef}>
             <button
-              key={c}
               type="button"
-              className={`shopb__filter${category === c ? ' is-active' : ''}`}
-              aria-pressed={category === c}
-              onClick={() => pick(c)}
+              className={`shopb__filter-toggle${selected.size > 0 ? ' is-active' : ''}`}
+              aria-expanded={open}
+              aria-haspopup="true"
+              onClick={() => setOpen((o) => !o)}
             >
-              {c}
+              Filter{selected.size > 0 ? ` (${selected.size})` : ''}
+              <span className={`shopb__caret${open ? ' is-open' : ''}`} aria-hidden="true">
+                ▾
+              </span>
             </button>
-          ))}
-        </div>
-      )}
+            {open && (
+              <div className="shopb__filter-menu" role="menu">
+                {categories.map((c) => (
+                  <label key={c} className="shopb__filter-opt">
+                    <input type="checkbox" checked={selected.has(c)} onChange={() => toggle(c)} />
+                    <span>{c}</span>
+                  </label>
+                ))}
+                {selected.size > 0 && (
+                  <button type="button" className="shopb__filter-clear" onClick={clearAll}>
+                    Clear all
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {visible.length === 0 ? (
-        <p className="shopb__empty">No merch{category !== 'All' ? ` in ${category}` : ''} yet — check back soon.</p>
+        <p className="shopb__empty">No merch matches those filters.</p>
       ) : (
         <div className="shopb__grid">
           {visible.map((p) => (
-            <a key={p.id} className="shopb__card" href={`/shop/${p.slug}`}>
+            <a key={p.id} className="shopb__card" href={`/merch/${p.slug}`}>
               <div className="shopb__media">
                 {p.image ? (
                   <img src={p.image} alt={p.title} loading="lazy" />

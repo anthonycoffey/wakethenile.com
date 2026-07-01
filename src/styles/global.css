@@ -441,14 +441,28 @@
    Shop browser — category filters, product grid, pagination
    (React island → styles live here, not scoped).
    ============================================================ */
-.shopb__filters {
+/* Bar: item count (left) + filter dropdown (right). */
+.shopb__bar {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.6rem;
-  margin-bottom: 2.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2rem;
 }
-.shopb__filter {
+.shopb__count {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.shopb__filter-wrap {
+  position: relative;
+}
+.shopb__filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   background: transparent;
   color: var(--accent);
   border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
@@ -460,21 +474,93 @@
   text-transform: uppercase;
   letter-spacing: 1px;
   cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
 }
-.shopb__filter:hover {
+.shopb__filter-toggle:hover {
   border-color: var(--accent);
 }
-.shopb__filter.is-active {
+.shopb__filter-toggle.is-active {
   background: var(--accent);
   color: var(--accent-ink);
   border-color: var(--accent);
 }
+.shopb__caret {
+  font-size: 0.7em;
+  transition: transform 0.2s ease;
+}
+.shopb__caret.is-open {
+  transform: rotate(180deg);
+}
+.shopb__filter-menu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 10;
+  min-width: 190px;
+  background: #0d0d0d;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: var(--radius);
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+.shopb__filter-opt {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 6px;
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+}
+.shopb__filter-opt:hover {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.shopb__filter-opt input {
+  accent-color: var(--accent);
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+}
+.shopb__filter-clear {
+  margin-top: 0.25rem;
+  background: transparent;
+  border: none;
+  border-top: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 0.6rem 0.7rem 0.3rem;
+  text-align: left;
+  cursor: pointer;
+}
+.shopb__filter-clear:hover {
+  color: var(--accent);
+}
 
+/* Product grid: 1 / 2 / 3 per row (mobile / tablet / desktop) so a 6-per-page
+   grid always breaks into even rows. */
 .shopb__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: 1fr;
   gap: 3rem 2rem;
+}
+@media (min-width: 600px) {
+  .shopb__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 960px) {
+  .shopb__grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 .shopb__card {
   display: block;
@@ -569,10 +655,4 @@
   text-transform: uppercase;
   letter-spacing: 1px;
   font-size: 0.8rem;
-}
-@media (max-width: 520px) {
-  .shopb__grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 2rem 1rem;
-  }
 }

@@ -41,7 +41,7 @@ export default function CheckoutReturn() {
           Your order is confirmed{email ? ` — a receipt is on its way to ${email}.` : '.'}
         </p>
         <p className="return__sub">We’ll email you when it ships.</p>
-        <a className="return__btn" href="/shop">
+        <a className="return__btn" href="/merch">
           Continue shopping
         </a>
       </>
