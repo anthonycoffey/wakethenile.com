@@ -109,7 +109,7 @@ export default function VideoCoverflow({ videos }: Props) {
                   poster={v.poster}
                   loop
                   playsInline
-                  preload="auto"
+                  preload={i === activeIndex ? 'auto' : 'metadata'}
                   onCanPlay={(e) => {
                     if (i === activeIndex) {
                       // Play with the current audio state — so a slide that
