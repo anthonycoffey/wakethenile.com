@@ -20,11 +20,48 @@ const items: NavItem[] =
 
 <header class="site-header">
   <a class="site-header__logo brand-mark" href="/" aria-label="Wake the Nile"></a>
-  <nav class="site-header__nav">
+
+  <nav class="site-header__nav" id="primary-nav">
     {items.map((item) => <a href={item.href}>{item.label}</a>)}
-    <Cart client:load />
   </nav>
+
+  <div class="site-header__actions">
+    <Cart client:load />
+    <button
+      class="site-header__burger"
+      type="button"
+      aria-label="Open menu"
+      aria-controls="primary-nav"
+      aria-expanded="false"
+    >
+      <span class="site-header__burger-box"><span class="site-header__burger-inner"></span></span>
+    </button>
+  </div>
 </header>
+
+<script is:inline>
+  (function () {
+    const header = document.querySelector('.site-header');
+    const burger = header && header.querySelector('.site-header__burger');
+    const nav = document.getElementById('primary-nav');
+    if (!header || !burger || !nav) return;
+    function setOpen(open) {
+      header.classList.toggle('is-nav-open', open);
+      burger.setAttribute('aria-expanded', String(open));
+      burger.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+      document.body.style.overflow = open ? 'hidden' : '';
+    }
+    burger.addEventListener('click', function () {
+      setOpen(!header.classList.contains('is-nav-open'));
+    });
+    nav.addEventListener('click', function (e) {
+      if (e.target.closest('a')) setOpen(false);
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') setOpen(false);
+    });
+  })();
+</script>
 
 <style>
   .site-header {
@@ -35,9 +72,8 @@ const items: NavItem[] =
     z-index: 20;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 1.4rem;
     padding: 2vh 5vw;
-    /* transparent overlay — sits on top of the 100vh section, no background */
     background: transparent;
     box-sizing: border-box;
   }
@@ -50,11 +86,11 @@ const items: NavItem[] =
     flex: 0 0 auto;
   }
   .site-header__nav {
+    flex: 1;
     display: flex;
     justify-content: flex-end;
     align-items: center;
     gap: 1.4rem;
-    flex-wrap: wrap;
   }
   .site-header__nav a {
     color: var(--accent);
@@ -71,15 +107,89 @@ const items: NavItem[] =
     text-decoration-thickness: 0.0625em;
     text-underline-offset: 0.15em;
   }
-  @media (max-width: 600px) {
-    .site-header {
-      flex-direction: column;
-      gap: 0.5rem;
-      align-items: center;
+  .site-header__actions {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  /* Hamburger button — hidden on desktop */
+  .site-header__burger {
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.4rem;
+    color: var(--accent);
+  }
+  .site-header__burger-box {
+    display: block;
+    width: 30px;
+    height: 22px;
+    position: relative;
+  }
+  .site-header__burger-inner,
+  .site-header__burger-inner::before,
+  .site-header__burger-inner::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    width: 30px;
+    height: 2.5px;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: transform 0.3s ease, opacity 0.2s ease, background-color 0.2s ease;
+  }
+  .site-header__burger-inner {
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .site-header__burger-inner::before {
+    top: -9px;
+  }
+  .site-header__burger-inner::after {
+    top: 9px;
+  }
+
+  @media (max-width: 768px) {
+    .site-header__burger {
+      display: inline-flex;
     }
+    /* Nav becomes a full-screen slide-in menu */
     .site-header__nav {
+      position: fixed;
+      inset: 0;
+      flex: none;
+      flex-direction: column;
       justify-content: center;
-      gap: 1rem;
+      gap: 2.25rem;
+      background: var(--bg);
+      transform: translateX(100%);
+      transition: transform 0.32s ease;
+      z-index: 30;
+    }
+    .site-header.is-nav-open .site-header__nav {
+      transform: translateX(0);
+    }
+    .site-header__nav a {
+      font-size: clamp(2rem, 1.6rem + 3vw, 2.75rem);
+    }
+    /* Keep the cart + burger (as the X) tappable above the open menu */
+    .site-header__actions {
+      z-index: 40;
+    }
+    /* Burger → X when open */
+    .site-header.is-nav-open .site-header__burger-inner {
+      background: transparent;
+    }
+    .site-header.is-nav-open .site-header__burger-inner::before {
+      top: 0;
+      transform: rotate(45deg);
+    }
+    .site-header.is-nav-open .site-header__burger-inner::after {
+      top: 0;
+      transform: rotate(-45deg);
     }
   }
 </style>
