@@ -1,36 +1,47 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import CheckoutEmbed from '../components/CheckoutEmbed.tsx';
+
+// PUBLIC_ vars are inlined at build time — safe to expose to the browser.
+const publishableKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY;
 ---
 
-<BaseLayout title="Checkout" description="Checkout." footer="scroll">
-  <section class="checkout-stub">
-    <h1>Checkout</h1>
-    <p>Secure Stripe checkout is being wired up next. Your cart is saved.</p>
-    <a class="checkout-stub__back" href="/cart">← Back to cart</a>
+<BaseLayout title="Checkout" description="Secure checkout." footer="scroll">
+  <section class="checkout">
+    <h1 class="checkout__title">Checkout</h1>
+    <CheckoutEmbed client:load publishableKey={publishableKey} />
   </section>
 </BaseLayout>
 
 <style>
-  .checkout-stub {
-    max-width: 640px;
+  .checkout {
+    max-width: 760px;
     margin-inline: auto;
-    padding: calc(12vh + 4.5rem) 1.5rem 6rem;
-    text-align: center;
+    padding: calc(7vh + 4.5rem) 1.25rem 6rem;
   }
-  .checkout-stub h1 {
+  .checkout__title {
     color: var(--accent);
-    font-size: clamp(2.25rem, 1.8rem + 2.5vw, 3.25rem);
-    margin-bottom: 1rem;
+    font-size: clamp(2rem, 1.6rem + 2vw, 3rem);
+    text-align: center;
+    margin-bottom: 2.5rem;
   }
-  .checkout-stub p {
+  .checkout :global(.checkout__msg) {
+    text-align: center;
     color: var(--muted);
-    line-height: 1.6;
-    margin-bottom: 2rem;
+    padding: 3rem 0;
   }
-  .checkout-stub__back {
+  .checkout :global(.checkout__msg a) {
     color: var(--accent);
     text-transform: uppercase;
     letter-spacing: 2px;
     font-size: 0.8rem;
+  }
+  .checkout :global(.checkout__msg--error p) {
+    color: var(--accent);
+    margin-bottom: 1rem;
+  }
+  /* Stripe embedded checkout renders its own iframe; give it room. */
+  .checkout :global(.checkout__embed) {
+    min-height: 60vh;
   }
 </style>

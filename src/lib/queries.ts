@@ -75,6 +75,12 @@ export const allProductSlugsQuery = `*[_type == "product" && ${NOT_DRAFT} && act
 export const shopPageQuery = `*[_type == "page" && (slug.current == "shop" || _id == "page-shop")][0]${PAGE}`;
 
 export const commerceSettingsQuery = `*[_type == "commerceSettings" && _id == "commerceSettings"][0]{
-  currency, allowedShippingCountries, defaultTaxCode, lowStockThreshold, storeEnabled,
+  currency, allowedShippingCountries, defaultTaxCode, enableTax, lowStockThreshold, storeEnabled,
   shippingRates[]{ label, amount, taxCode, taxBehavior }
+}`;
+
+// Server-side authoritative lookup for checkout validation (fresh price + stock).
+export const productsForCheckoutQuery = `*[_type == "product" && ${NOT_DRAFT} && _id in $ids]{
+  _id, title, price, taxCode, active, soldOut, "image": images[0],
+  variants[]{ label, sku, price, stock }
 }`;

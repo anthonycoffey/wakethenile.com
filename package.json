@@ -14,17 +14,20 @@
     "studio:deploy": "npm --prefix studio run deploy"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "^12.6.0",
+    "@astrojs/cloudflare": "^12.6.13",
     "@astrojs/react": "^4.4.0",
     "@astrojs/sitemap": "^3.7.3",
     "@fontsource/martel-sans": "^5.2.0",
     "@portabletext/to-html": "^5.0.0",
     "@sanity/client": "^7.11.0",
     "@sanity/image-url": "^2.1.0",
+    "@stripe/react-stripe-js": "^6.6.0",
+    "@stripe/stripe-js": "^9.8.0",
     "@tailwindcss/vite": "^4.1.0",
     "astro": "^5.18.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "stripe": "^22.3.0",
     "swiper": "^11.2.0",
     "tailwindcss": "^4.1.0"
   },

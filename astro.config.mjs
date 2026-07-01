@@ -2,15 +2,23 @@
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import sitemap from '@astrojs/sitemap';
+import cloudflare from '@astrojs/cloudflare';
 import tailwindcss from '@tailwindcss/vite';
 
 // https://astro.build/config
-// Phase A is fully static (no server routes) → no adapter needed; deploy dist/
-// to Cloudflare Pages. When v2 adds a contact Worker, re-add @astrojs/cloudflare
-// and switch output to 'server'/'hybrid'.
+// The site stays STATIC: every marketing/merch page is prerendered. The
+// Cloudflare adapter is enabled only so the few commerce endpoints under
+// src/pages/api/* (and the checkout return page) can opt into on-demand
+// rendering via `export const prerender = false`. The adapter emits
+// _worker.js + _routes.json into dist/, so `wrangler pages deploy dist`
+// (and the Git-connected Pages build) work unchanged.
 export default defineConfig({
   site: 'https://wakethenile.com',
   output: 'static',
+  adapter: cloudflare({
+    // Expose Cloudflare env/bindings via `locals.runtime` during `astro dev`.
+    platformProxy: { enabled: true },
+  }),
   trailingSlash: 'never',
   integrations: [react(), sitemap()],
   vite: {
