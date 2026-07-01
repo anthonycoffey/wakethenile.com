@@ -60,7 +60,7 @@ function CheckoutForm() {
   const [message, setMessage] = useState<string | null>(null);
   const shippingInit = useRef(false);
 
-  const checkout = state?.type === 'ready' ? state.checkout : null;
+  const checkout = state?.type === 'success' ? state.checkout : null;
 
   // Pre-select the first shipping option so the total is complete immediately.
   useEffect(() => {
@@ -144,7 +144,7 @@ function CheckoutForm() {
         </div>
       )}
 
-      <button className="ccheckout__pay" type="submit" disabled={submitting || state.type !== 'ready'}>
+      <button className="ccheckout__pay" type="submit" disabled={submitting || state.type !== 'success'}>
         {submitting ? 'Processing…' : total ? `Pay ${total}` : 'Pay now'}
       </button>
 
