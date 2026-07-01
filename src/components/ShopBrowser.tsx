@@ -75,18 +75,47 @@ export default function ShopBrowser({ products }: { products: BrowserProduct[] }
 
         {categories.length > 0 && (
           <div className="shopb__filter-wrap" ref={wrapRef}>
-            <button
-              type="button"
-              className={`shopb__filter-toggle${selected.size > 0 ? ' is-active' : ''}`}
+            <div
+              className={`shopb__trigger${open ? ' is-open' : ''}`}
+              role="button"
+              tabIndex={0}
               aria-expanded={open}
               aria-haspopup="true"
               onClick={() => setOpen((o) => !o)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setOpen((o) => !o);
+                }
+              }}
             >
-              Filter{selected.size > 0 ? ` (${selected.size})` : ''}
-              <span className={`shopb__caret${open ? ' is-open' : ''}`} aria-hidden="true">
-                ▾
+              <div className="shopb__chips">
+                {selected.size === 0 ? (
+                  <span className="shopb__placeholder">filter products</span>
+                ) : (
+                  [...selected].map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      className="shopb__chip"
+                      aria-label={`Remove ${c} filter`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggle(c);
+                      }}
+                    >
+                      {c}
+                      <span className="shopb__chip-x" aria-hidden="true">
+                        ×
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+              <span className="shopb__caret" aria-hidden="true">
+                <span className={`shopb__caret-icon${open ? ' is-open' : ''}`}>▾</span>
               </span>
-            </button>
+            </div>
             {open && (
               <div className="shopb__filter-menu" role="menu">
                 {categories.map((c) => (

@@ -459,36 +459,82 @@
 .shopb__filter-wrap {
   position: relative;
 }
-.shopb__filter-toggle {
+/* Filter trigger: a bordered container that shows a placeholder, or the
+   selected filters as removable chips, with a caret that opens the dropdown.
+   Capped at 200px; extra chips scroll horizontally while the caret stays pinned. */
+.shopb__trigger {
+  display: flex;
+  align-items: stretch;
+  width: 200px;
+  background: transparent;
+  border: 2px solid var(--accent);
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+}
+.shopb__chips {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.55rem;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+.shopb__chips::-webkit-scrollbar {
+  display: none;
+}
+.shopb__placeholder {
+  color: color-mix(in srgb, var(--accent) 60%, transparent);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.shopb__chip {
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  background: transparent;
+  gap: 0.3rem;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  border-radius: 6px;
   color: var(--accent);
-  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
-  border-radius: 100px;
-  padding: 0.5rem 1.1rem;
   font-family: inherit;
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
+  padding: 0.18rem 0.4rem 0.18rem 0.55rem;
   cursor: pointer;
-  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
-.shopb__filter-toggle:hover {
+.shopb__chip:hover {
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
   border-color: var(--accent);
 }
-.shopb__filter-toggle.is-active {
-  background: var(--accent);
-  color: var(--accent-ink);
-  border-color: var(--accent);
+.shopb__chip-x {
+  font-size: 1rem;
+  line-height: 1;
+  color: color-mix(in srgb, var(--accent) 75%, transparent);
 }
 .shopb__caret {
-  font-size: 0.7em;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  padding: 0 0.6rem;
+  color: var(--accent);
+  border-left: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.shopb__caret-icon {
+  font-size: 0.7rem;
+  line-height: 1;
   transition: transform 0.2s ease;
 }
-.shopb__caret.is-open {
+.shopb__caret-icon.is-open {
   transform: rotate(180deg);
 }
 .shopb__filter-menu {
@@ -496,7 +542,7 @@
   top: calc(100% + 0.5rem);
   right: 0;
   z-index: 10;
-  min-width: 190px;
+  width: 200px;
   background: #0d0d0d;
   border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
   border-radius: var(--radius);
