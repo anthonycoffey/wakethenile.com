@@ -22,6 +22,3 @@ _archive/
 .DS_Store
 *.log
 .vscode/
-
-# large video assets — served by Pages, not tracked in git
-public/videos/
