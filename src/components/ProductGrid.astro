@@ -1,0 +1,42 @@
+---
+import ProductCard from './ProductCard.astro';
+import type { ProductCardData } from '../lib/types';
+
+interface Props {
+  products: ProductCardData[];
+}
+const { products } = Astro.props;
+---
+
+{products.length === 0 ? (
+  <p class="merchlist-empty">No merch yet — check back soon.</p>
+) : (
+  <div class="merchlist-wrapper">
+    <ul>
+      {products.map((product) => <ProductCard product={product} />)}
+    </ul>
+  </div>
+)}
+
+<style>
+  .merchlist-wrapper {
+    border: 1px solid var(--accent);
+    padding: 0 3rem 3rem;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+  .merchlist-wrapper ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .merchlist-empty {
+    text-align: center;
+    color: var(--muted);
+  }
+  @media (max-width: 600px) {
+    .merchlist-wrapper {
+      padding: 0 1.25rem 2rem;
+    }
+  }
+</style>

@@ -1,0 +1,107 @@
+---
+import { urlForWidth } from '../lib/sanityImage';
+import { formatPrice } from '../lib/format';
+import type { ProductCardData } from '../lib/types';
+
+interface Props {
+  product: ProductCardData;
+}
+const { product } = Astro.props;
+
+const img = urlForWidth(product.images?.[0], 640) ?? undefined;
+const href = `/shop/${product.slug}`;
+const soldOut = product.inStock === false;
+---
+
+<li class="merch">
+  <a class="merch__media" href={href} aria-label={product.title}>
+    {img
+      ? <img src={img} alt={product.title ?? ''} loading="lazy" />
+      : <span class="merch__placeholder" aria-hidden="true" />}
+  </a>
+
+  <a class="merch__title" href={href}>{product.title}</a>
+
+  <div class="merch__price">
+    {soldOut ? <span class="merch__soldout">Sold Out</span> : formatPrice(product.fromPrice)}
+  </div>
+
+  <div class="merch__cta">
+    <a class="tickets-button" href={href}>{soldOut ? 'View' : 'Shop'}</a>
+  </div>
+</li>
+
+<style>
+  .merch {
+    list-style: none;
+    text-align: center;
+    padding-top: 2.5rem;
+  }
+  .merch:not(:last-child) {
+    padding-bottom: 2.5rem;
+    border-bottom: 1px dashed var(--accent);
+  }
+  .merch__media {
+    display: block;
+    width: min(280px, 70%);
+    margin: 0 auto 1rem;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+  }
+  .merch__media img,
+  .merch__placeholder {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.4s ease;
+  }
+  .merch__placeholder {
+    background: linear-gradient(135deg, #1a1a1a, #262010);
+  }
+  .merch__media:hover img {
+    transform: scale(1.04);
+  }
+  .merch__title {
+    display: inline-block;
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 1.15em;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+  .merch__price {
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 120%;
+    margin-top: 4px;
+  }
+  .merch__soldout {
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+    font-size: 0.85em;
+  }
+  .merch__cta {
+    margin: 14px 0 2px;
+    display: flex;
+    justify-content: center;
+  }
+  /* Reuse the live-site outline "tickets" button styling for cohesion. */
+  .tickets-button {
+    color: var(--accent);
+    text-transform: uppercase;
+    padding: 8px 16px;
+    text-decoration: none;
+    font-weight: 500;
+    letter-spacing: 2px;
+    background: transparent;
+    border: 1px solid var(--accent);
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  .tickets-button:hover {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+</style>

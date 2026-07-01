@@ -45,3 +45,36 @@ export const upcomingShowsQuery = `*[_type == "show" && ${NOT_DRAFT} && dateTime
 export const pastShowsQuery = `*[_type == "show" && ${NOT_DRAFT} && dateTime(date) < dateTime(now())] | order(date desc){
   _id, title, date, venueName, city, state, ticketsUrl, ticketsLabel, location, soldOut
 }`;
+
+/* ---- Merch / commerce ---- */
+
+const VARIANT = `{ label, sku, price, stock }`;
+
+// Grid card: enough to render a tile + a derived "from" price and stock state.
+export const allProductsQuery = `*[_type == "product" && ${NOT_DRAFT} && active == true] | order(title asc){
+  _id, title, "slug": slug.current, images, price, soldOut,
+  variants[]${VARIANT},
+  "fromPrice": coalesce(price, math::min(variants[].price)),
+  "inStock": soldOut != true && (
+    count(variants) == 0 || count(variants[coalesce(stock, 0) > 0]) > 0
+  )
+}`;
+
+export const productBySlugQuery = `*[_type == "product" && ${NOT_DRAFT} && slug.current == $slug][0]{
+  _id, title, "slug": slug.current, images, description, price, soldOut, active, taxCode,
+  variants[]${VARIANT},
+  ${SEO}
+}`;
+
+// Only need slugs of purchasable products for getStaticPaths.
+export const allProductSlugsQuery = `*[_type == "product" && ${NOT_DRAFT} && active == true && defined(slug.current)]{
+  "slug": slug.current
+}`;
+
+// Optional cover for the /shop landing (reuses the COVER `page` model).
+export const shopPageQuery = `*[_type == "page" && (slug.current == "shop" || _id == "page-shop")][0]${PAGE}`;
+
+export const commerceSettingsQuery = `*[_type == "commerceSettings" && _id == "commerceSettings"][0]{
+  currency, allowedShippingCountries, defaultTaxCode, lowStockThreshold, storeEnabled,
+  shippingRates[]{ label, amount, taxCode, taxBehavior }
+}`;

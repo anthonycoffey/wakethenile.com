@@ -77,3 +77,64 @@ export interface Show {
   location?: Geopoint;
   soldOut?: boolean;
 }
+
+/* ---- Merch / commerce ---- */
+
+export interface ProductVariant {
+  label?: string;
+  sku?: string;
+  /** Overrides the product base price when set. */
+  price?: number;
+  /** Units on hand; auto-decrements on sale. */
+  stock?: number;
+}
+
+export interface Product {
+  _id: string;
+  title?: string;
+  slug?: string;
+  images?: SanityImageSource[];
+  description?: unknown[];
+  /** Base price (USD). Variants may override per-option. */
+  price?: number;
+  active?: boolean;
+  /** Stripe Tax product tax code; falls back to the store default. */
+  taxCode?: string;
+  soldOut?: boolean;
+  variants?: ProductVariant[];
+  seo?: SeoFields;
+}
+
+/** Extra fields projected onto grid cards by `allProductsQuery`. */
+export interface ProductCardData extends Product {
+  fromPrice?: number;
+  inStock?: boolean;
+}
+
+export interface ShippingRate {
+  label?: string;
+  amount?: number;
+  taxCode?: string;
+  taxBehavior?: 'exclusive' | 'inclusive';
+}
+
+export interface CommerceSettings {
+  currency?: string;
+  allowedShippingCountries?: string[];
+  defaultTaxCode?: string;
+  lowStockThreshold?: number;
+  storeEnabled?: boolean;
+  shippingRates?: ShippingRate[];
+}
+
+/** A line in the client-side cart (localStorage). */
+export interface CartItem {
+  productId: string;
+  slug: string;
+  title: string;
+  sku: string;
+  variantLabel?: string;
+  unitPrice: number;
+  qty: number;
+  image?: string;
+}

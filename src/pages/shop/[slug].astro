@@ -1,0 +1,200 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ProductPurchase from '../../components/ProductPurchase.tsx';
+import type { PurchaseVariant } from '../../components/ProductPurchase.tsx';
+import { sanityFetch } from '../../lib/sanity';
+import { allProductSlugsQuery, productBySlugQuery } from '../../lib/queries';
+import { urlForWidth } from '../../lib/sanityImage';
+import { renderPortableText } from '../../lib/portableText';
+import type { Product } from '../../lib/types';
+
+export async function getStaticPaths() {
+  const slugs = await sanityFetch<{ slug: string }[]>(allProductSlugsQuery, {}, []);
+  return slugs.filter((s) => s.slug).map((s) => ({ params: { slug: s.slug } }));
+}
+
+const { slug } = Astro.params;
+const product = await sanityFetch<Product | null>(productBySlugQuery, { slug }, null);
+
+if (!product) {
+  return Astro.redirect('/shop');
+}
+
+const gallery = (product.images ?? [])
+  .map((img) => urlForWidth(img, 900))
+  .filter((u): u is string => !!u);
+
+const variants: PurchaseVariant[] = (product.variants ?? []).map((v) => ({
+  label: v.label ?? '',
+  sku: v.sku ?? '',
+  price: typeof v.price === 'number' ? v.price : (product.price ?? 0),
+  stock: typeof v.stock === 'number' ? v.stock : 0,
+}));
+
+const descriptionHtml = renderPortableText(product.description);
+---
+
+<BaseLayout title={product.title} seo={product.seo} footer="scroll">
+  <section class="pdp">
+    <a class="pdp__back" href="/shop">← Shop</a>
+    <h1 class="pdp__title">{product.title}</h1>
+    <hr class="pdp__divider" />
+
+    <div class="pdp__gallery">
+      {gallery.length > 0 ? (
+        gallery.map((src, i) => (
+          <img
+            class="pdp__img"
+            src={src}
+            alt={`${product.title} ${i + 1}`}
+            loading={i === 0 ? 'eager' : 'lazy'}
+          />
+        ))
+      ) : (
+        <span class="pdp__placeholder" aria-hidden="true" />
+      )}
+    </div>
+
+    <ProductPurchase
+      client:load
+      productId={product._id}
+      slug={product.slug ?? ''}
+      title={product.title ?? ''}
+      image={gallery[0]}
+      basePrice={product.price}
+      variants={variants}
+    />
+
+    {descriptionHtml && (
+      <div class="pdp__desc" set:html={descriptionHtml} />
+    )}
+  </section>
+</BaseLayout>
+
+<style>
+  .pdp {
+    max-width: 640px;
+    margin-inline: auto;
+    padding: calc(9vh + 4rem) 1.25rem 5rem;
+    text-align: center;
+  }
+  .pdp__back {
+    display: inline-block;
+    color: var(--muted);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 1.25rem;
+  }
+  .pdp__title {
+    color: var(--accent);
+    font-size: clamp(2.25rem, 1.8rem + 2.5vw, 3.5rem);
+    letter-spacing: -0.02em;
+  }
+  .pdp__divider {
+    border: none;
+    border-top: 1px solid var(--accent);
+    opacity: 0.5;
+    max-width: 480px;
+    margin: 1.25rem auto 2rem;
+  }
+  .pdp__gallery {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 2.5rem;
+  }
+  .pdp__img,
+  .pdp__placeholder {
+    width: min(460px, 100%);
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border: 1px solid var(--accent);
+  }
+  .pdp__placeholder {
+    background: linear-gradient(135deg, #1a1a1a, #262010);
+  }
+  .pdp__desc {
+    margin: 2.5rem auto 0;
+    max-width: 520px;
+    color: var(--muted);
+    line-height: 1.7;
+    text-align: left;
+  }
+  .pdp__desc :global(a) {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+</style>
+
+<style is:global>
+  /* React-island purchase widget — styled to the outline/hairline brand
+     language (not reached by Astro scoped styles). */
+  .purchase {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    align-items: center;
+  }
+  .purchase__price {
+    color: var(--accent);
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin: 0;
+  }
+  .purchase__controls {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .purchase__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--muted);
+  }
+  .purchase__field select,
+  .purchase__field input {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 0;
+    padding: 0.7rem 0.9rem;
+    font-family: inherit;
+    font-size: 1rem;
+    text-align: center;
+  }
+  .purchase__field select {
+    min-width: 12rem;
+    /* keep native arrow legible on the dark field */
+    color-scheme: dark;
+  }
+  .purchase__field input {
+    width: 6rem;
+  }
+  .purchase__btn {
+    margin-top: 0.25rem;
+  }
+  .purchase__btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .purchase__view {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-decoration: underline;
+  }
+  .purchase__low {
+    color: var(--muted);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 0;
+  }
+</style>

@@ -1,0 +1,78 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ProductGrid from '../components/ProductGrid.astro';
+import { sanityFetch } from '../lib/sanity';
+import { allProductsQuery, shopPageQuery } from '../lib/queries';
+import { urlFor } from '../lib/sanityImage';
+import type { ProductCardData, Page } from '../lib/types';
+
+const [products, config] = await Promise.all([
+  sanityFetch<ProductCardData[]>(allProductsQuery, {}, []),
+  sanityFetch<Page | null>(shopPageQuery, {}, null),
+]);
+
+const bg = config?.coverImage ? urlFor(config.coverImage) : undefined;
+const ov = config?.overlay;
+const overlayOn = ov?.enabled !== false && !!ov?.color;
+const overlayColor = ov?.color ?? '#000000';
+const overlayOpacity = typeof ov?.opacity === 'number' ? ov.opacity : 0.55;
+---
+
+<BaseLayout title="Shop" description="Official Wake the Nile merch." footer="scroll">
+  <section class="shop" style={bg ? `--cover-bg: url('${bg}')` : undefined}>
+    {bg && <div class="shop__bg" />}
+    {bg && overlayOn && (
+      <div class="shop__overlay" style={`background:${overlayColor}; opacity:${overlayOpacity}`} />
+    )}
+    <div class="shop__content">
+      <h1 class="shop__title">Shop</h1>
+      <hr class="shop__divider" />
+      <ProductGrid products={products} />
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .shop {
+    position: relative;
+    min-height: 100svh;
+    padding-bottom: 4rem;
+  }
+  .shop__bg {
+    position: fixed;
+    inset: 0;
+    background-image: var(--cover-bg);
+    background-size: cover;
+    background-position: center;
+    z-index: -2;
+  }
+  .shop__overlay {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+  }
+  .shop__content {
+    position: relative;
+    z-index: 1;
+    /* Push content down so the cover breathes (matches the Shows page);
+       fall back to a smaller offset when there is no cover image. */
+    padding: 40vh 1.25rem 2rem;
+  }
+  .shop:not([style*='--cover-bg']) .shop__content {
+    padding-top: calc(9vh + 5rem);
+  }
+  .shop__title {
+    text-align: center;
+    color: var(--accent);
+    font-size: clamp(3.5rem, 3rem + 4vw, 5.5rem);
+    margin-bottom: 1rem;
+    letter-spacing: -0.02em;
+  }
+  .shop__divider {
+    border: none;
+    border-top: 1px solid var(--accent);
+    margin: 0 auto 2.5rem;
+    max-width: 640px;
+    opacity: 0.5;
+  }
+</style>
