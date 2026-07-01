@@ -169,7 +169,10 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
   const origin = new URL(request.url).origin;
   const params: Record<string, unknown> = {
     mode: 'payment',
-    ui_mode: 'embedded_page',
+    // Custom Checkout with Elements — fully styleable on our own page (dark
+    // theme). Still a server Checkout Session, so pricing/tax/shipping/promo all
+    // apply. Pairs with <CheckoutElementsProvider> on the client.
+    ui_mode: 'elements',
     line_items,
     shipping_address_collection: { allowed_countries: countries },
     shipping_options,

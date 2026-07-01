@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import CheckoutEmbed from '../components/CheckoutEmbed.tsx';
+import CheckoutCustom from '../components/CheckoutCustom.tsx';
 
 // PUBLIC_ vars are inlined at build time — safe to expose to the browser.
 const publishableKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY;
@@ -9,13 +9,13 @@ const publishableKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY;
 <BaseLayout title="Checkout" description="Secure checkout." footer="scroll">
   <section class="checkout">
     <h1 class="checkout__title">Checkout</h1>
-    <CheckoutEmbed client:load publishableKey={publishableKey} />
+    <CheckoutCustom client:load publishableKey={publishableKey} />
   </section>
 </BaseLayout>
 
 <style>
   .checkout {
-    max-width: 760px;
+    max-width: 620px;
     margin-inline: auto;
     padding: calc(7vh + 4.5rem) 1.25rem 6rem;
   }
@@ -40,8 +40,89 @@ const publishableKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY;
     color: var(--accent);
     margin-bottom: 1rem;
   }
-  /* Stripe embedded checkout renders its own iframe; give it room. */
-  .checkout :global(.checkout__embed) {
-    min-height: 60vh;
+</style>
+
+<style is:global>
+  /* Custom Checkout form layout (React island; Stripe Elements inside are
+     themed via the Appearance API in CheckoutCustom.tsx). */
+  .ccheckout {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+  .ccheckout__section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+  .ccheckout__h {
+    color: var(--accent);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin: 0;
+  }
+  .ccheckout__ships {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+  .ccheckout__ship {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    border-radius: var(--radius);
+    color: var(--accent);
+    cursor: pointer;
+  }
+  .ccheckout__ship input {
+    accent-color: var(--accent);
+  }
+  .ccheckout__ship-name {
+    flex: 1;
+    font-weight: 600;
+  }
+  .ccheckout__ship-amt {
+    color: var(--muted);
+  }
+  .ccheckout__total {
+    display: flex;
+    justify-content: space-between;
+    color: var(--accent);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding-top: 1rem;
+    border-top: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  }
+  /* Primary pay button — filled gold, inverts on hover. */
+  .ccheckout__pay {
+    width: 100%;
+    padding: 1rem 1.5rem;
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: 2px solid var(--accent);
+    border-radius: 100px;
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 1px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+  .ccheckout__pay:hover:not(:disabled) {
+    background: transparent;
+    color: var(--accent);
+  }
+  .ccheckout__pay:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .ccheckout__error {
+    color: #ff8080;
+    text-align: center;
+    margin: 0;
   }
 </style>
