@@ -9,34 +9,28 @@ const { products } = Astro.props;
 ---
 
 {products.length === 0 ? (
-  <p class="merchlist-empty">No merch yet — check back soon.</p>
+  <p class="pgrid-empty">No merch yet — check back soon.</p>
 ) : (
-  <div class="merchlist-wrapper">
-    <ul>
-      {products.map((product) => <ProductCard product={product} />)}
-    </ul>
+  <div class="pgrid">
+    {products.map((product) => <ProductCard product={product} />)}
   </div>
 )}
 
 <style>
-  .merchlist-wrapper {
-    border: 1px solid var(--accent);
-    padding: 0 3rem 3rem;
-    max-width: 640px;
-    margin: 0 auto;
+  .pgrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 3rem 2rem;
   }
-  .merchlist-wrapper ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-  .merchlist-empty {
+  .pgrid-empty {
     text-align: center;
     color: var(--muted);
+    padding: 4rem 0;
   }
-  @media (max-width: 600px) {
-    .merchlist-wrapper {
-      padding: 0 1.25rem 2rem;
+  @media (max-width: 520px) {
+    .pgrid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2rem 1rem;
     }
   }
 </style>

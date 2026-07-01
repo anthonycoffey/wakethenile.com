@@ -45,6 +45,14 @@ export default function ProductPurchase({
   const stock = hasVariants ? (selected?.stock ?? 0) : Infinity;
   const soldOut = hasVariants ? stock <= 0 : false;
   const canAdd = unitPrice > 0 && !soldOut && qty > 0;
+  // A single unlabeled "One Size" variant reads better as a plain buy button.
+  const showSizes = hasVariants && !(variants.length === 1 && /one size/i.test(variants[0].label));
+
+  function selectSku(next: string) {
+    setSku(next);
+    setQty(1);
+    setAdded(false);
+  }
 
   function handleAdd() {
     if (!canAdd) return;
@@ -66,41 +74,53 @@ export default function ProductPurchase({
     <div className="purchase">
       {unitPrice > 0 && <p className="purchase__price">{formatPrice(unitPrice)}</p>}
 
-      <div className="purchase__controls">
-        {hasVariants && (
-          <label className="purchase__field">
-            <span>Option</span>
-            <select
-              value={sku}
-              onChange={(e) => {
-                setSku(e.target.value);
-                setQty(1);
-              }}
-            >
-              {variants.map((v) => (
-                <option key={v.sku} value={v.sku} disabled={v.stock <= 0}>
-                  {v.label}
-                  {v.stock <= 0 ? ' — sold out' : ''}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
+      {showSizes && (
+        <div>
+          <span className="purchase__label">Size</span>
+          <div className="purchase__sizes">
+            {variants.map((v) => (
+              <button
+                key={v.sku}
+                type="button"
+                className="purchase__size"
+                aria-pressed={v.sku === sku}
+                disabled={v.stock <= 0}
+                onClick={() => selectSku(v.sku)}
+              >
+                {v.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
-        <label className="purchase__field">
-          <span>Qty</span>
-          <input
-            type="number"
-            min={1}
-            max={stock === Infinity ? undefined : stock}
-            value={qty}
-            onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))}
-          />
-        </label>
+      <div>
+        <span className="purchase__label">Quantity</span>
+        <div className="purchase__qtyrow">
+          <button
+            type="button"
+            className="purchase__qtybtn"
+            aria-label="Decrease quantity"
+            disabled={qty <= 1}
+            onClick={() => setQty((q) => Math.max(1, q - 1))}
+          >
+            −
+          </button>
+          <span className="purchase__qtyval">{qty}</span>
+          <button
+            type="button"
+            className="purchase__qtybtn"
+            aria-label="Increase quantity"
+            disabled={stock !== Infinity && qty >= stock}
+            onClick={() => setQty((q) => (stock === Infinity ? q + 1 : Math.min(stock, q + 1)))}
+          >
+            +
+          </button>
+        </div>
       </div>
 
-      <button className="btn purchase__btn" onClick={handleAdd} disabled={!canAdd}>
-        {soldOut ? 'Sold Out' : added ? 'Added ✓' : 'Add to Cart'}
+      <button className="purchase__add" onClick={handleAdd} disabled={!canAdd}>
+        {soldOut ? 'Sold Out' : added ? 'Added to Cart ✓' : 'Add to Cart'}
       </button>
 
       {added && (
@@ -109,7 +129,7 @@ export default function ProductPurchase({
         </a>
       )}
       {!soldOut && stock !== Infinity && stock <= 5 && (
-        <p className="purchase__low">Only {stock} left</p>
+        <p className="purchase__note">Only {stock} left in stock</p>
       )}
     </div>
   );

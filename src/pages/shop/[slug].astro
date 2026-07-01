@@ -21,7 +21,7 @@ if (!product) {
 }
 
 const gallery = (product.images ?? [])
-  .map((img) => urlForWidth(img, 900))
+  .map((img) => urlForWidth(img, 1000))
   .filter((u): u is string => !!u);
 
 const variants: PurchaseVariant[] = (product.variants ?? []).map((v) => ({
@@ -36,165 +36,249 @@ const descriptionHtml = renderPortableText(product.description);
 
 <BaseLayout title={product.title} seo={product.seo} footer="scroll">
   <section class="pdp">
-    <a class="pdp__back" href="/shop">← Shop</a>
-    <h1 class="pdp__title">{product.title}</h1>
-    <hr class="pdp__divider" />
+    <a class="pdp__back" href="/shop">← Back to Shop</a>
 
-    <div class="pdp__gallery">
-      {gallery.length > 0 ? (
-        gallery.map((src, i) => (
-          <img
-            class="pdp__img"
-            src={src}
-            alt={`${product.title} ${i + 1}`}
-            loading={i === 0 ? 'eager' : 'lazy'}
-          />
-        ))
-      ) : (
-        <span class="pdp__placeholder" aria-hidden="true" />
-      )}
+    <div class="pdp__grid">
+      <div class="pdp__gallery">
+        {gallery.length > 0 ? (
+          <>
+            <img class="pdp__main" src={gallery[0]} alt={product.title} loading="eager" />
+            {gallery.length > 1 && (
+              <div class="pdp__thumbs">
+                {gallery.slice(1).map((src, i) => (
+                  <img class="pdp__thumb" src={src} alt={`${product.title} ${i + 2}`} loading="lazy" />
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <span class="pdp__placeholder" aria-hidden="true" />
+        )}
+      </div>
+
+      <div class="pdp__info">
+        <h1 class="pdp__title">{product.title}</h1>
+
+        <ProductPurchase
+          client:load
+          productId={product._id}
+          slug={product.slug ?? ''}
+          title={product.title ?? ''}
+          image={gallery[0]}
+          basePrice={product.price}
+          variants={variants}
+        />
+
+        {descriptionHtml && (
+          <div class="pdp__desc" set:html={descriptionHtml} />
+        )}
+      </div>
     </div>
-
-    <ProductPurchase
-      client:load
-      productId={product._id}
-      slug={product.slug ?? ''}
-      title={product.title ?? ''}
-      image={gallery[0]}
-      basePrice={product.price}
-      variants={variants}
-    />
-
-    {descriptionHtml && (
-      <div class="pdp__desc" set:html={descriptionHtml} />
-    )}
   </section>
 </BaseLayout>
 
 <style>
   .pdp {
-    max-width: 640px;
+    max-width: 1100px;
     margin-inline: auto;
-    padding: calc(9vh + 4rem) 1.25rem 5rem;
-    text-align: center;
+    padding: calc(7vh + 4.5rem) 1.5rem 6rem;
   }
   .pdp__back {
     display: inline-block;
     color: var(--muted);
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 2px;
-    margin-bottom: 1.25rem;
+    margin-bottom: 2rem;
   }
-  .pdp__title {
+  .pdp__back:hover {
     color: var(--accent);
-    font-size: clamp(2.25rem, 1.8rem + 2.5vw, 3.5rem);
-    letter-spacing: -0.02em;
   }
-  .pdp__divider {
-    border: none;
-    border-top: 1px solid var(--accent);
-    opacity: 0.5;
-    max-width: 480px;
-    margin: 1.25rem auto 2rem;
+  .pdp__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3.5rem;
+    align-items: start;
   }
   .pdp__gallery {
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    align-items: center;
-    margin-bottom: 2.5rem;
   }
-  .pdp__img,
+  .pdp__main,
   .pdp__placeholder {
-    width: min(460px, 100%);
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    background: #111;
+  }
+  .pdp__placeholder {
+    background: repeating-linear-gradient(
+      45deg, #141414, #141414 14px, #1a1a1a 14px, #1a1a1a 28px
+    );
+  }
+  .pdp__thumbs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+  }
+  .pdp__thumb {
+    width: 100%;
     aspect-ratio: 1 / 1;
     object-fit: cover;
-    border: 1px solid var(--accent);
+    background: #111;
+    cursor: pointer;
   }
-  .pdp__placeholder {
-    background: linear-gradient(135deg, #1a1a1a, #262010);
+  .pdp__info {
+    position: sticky;
+    top: 6.5rem;
+  }
+  .pdp__title {
+    color: var(--accent);
+    font-size: clamp(1.9rem, 1.5rem + 2vw, 2.75rem);
+    letter-spacing: -0.02em;
+    margin-bottom: 1.5rem;
   }
   .pdp__desc {
-    margin: 2.5rem auto 0;
-    max-width: 520px;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
     color: var(--muted);
     line-height: 1.7;
-    text-align: left;
   }
   .pdp__desc :global(a) {
     color: var(--accent);
     text-decoration: underline;
   }
+  @media (max-width: 760px) {
+    .pdp__grid {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+    .pdp__info {
+      position: static;
+    }
+  }
 </style>
 
 <style is:global>
-  /* React-island purchase widget — styled to the outline/hairline brand
-     language (not reached by Astro scoped styles). */
+  /* React-island purchase widget — standard e-commerce controls, gold brand. */
   .purchase {
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
-    align-items: center;
+    gap: 1.5rem;
+    align-items: flex-start;
   }
   .purchase__price {
     color: var(--accent);
-    font-size: 1.6rem;
+    font-size: 1.8rem;
     font-weight: 700;
     margin: 0;
   }
-  .purchase__controls {
-    display: flex;
-    gap: 1rem;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-  .purchase__field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+  .purchase__label {
+    display: block;
     font-size: 0.7rem;
     text-transform: uppercase;
     letter-spacing: 2px;
     color: var(--muted);
+    margin-bottom: 0.6rem;
   }
-  .purchase__field select,
-  .purchase__field input {
+  .purchase__sizes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+  .purchase__size {
+    min-width: 3rem;
+    padding: 0.6rem 0.9rem;
     background: transparent;
     color: var(--accent);
-    border: 1px solid var(--accent);
-    border-radius: 0;
-    padding: 0.7rem 0.9rem;
+    border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
     font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  }
+  .purchase__size:hover:not(:disabled) {
+    border-color: var(--accent);
+  }
+  .purchase__size[aria-pressed='true'] {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: var(--accent);
+  }
+  .purchase__size:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    text-decoration: line-through;
+  }
+  .purchase__qtyrow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+  .purchase__qtybtn {
+    width: 2.6rem;
+    height: 2.6rem;
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+    font-size: 1.2rem;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .purchase__qtybtn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+  .purchase__qtyval {
+    min-width: 3rem;
+    height: 2.6rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-top: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+    color: var(--accent);
+    font-weight: 700;
+  }
+  /* Primary "add to cart" — filled gold, inverts on hover (standard CTA). */
+  .purchase__add {
+    width: 100%;
+    max-width: 22rem;
+    padding: 0.95rem 1.5rem;
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: 2px solid var(--accent);
+    border-radius: 100px;
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 1px;
     font-size: 1rem;
-    text-align: center;
+    cursor: pointer;
+    transition: background-color 0.25s ease, color 0.25s ease;
   }
-  .purchase__field select {
-    min-width: 12rem;
-    /* keep native arrow legible on the dark field */
-    color-scheme: dark;
+  .purchase__add:hover:not(:disabled) {
+    background: transparent;
+    color: var(--accent);
   }
-  .purchase__field input {
-    width: 6rem;
-  }
-  .purchase__btn {
-    margin-top: 0.25rem;
-  }
-  .purchase__btn:disabled {
+  .purchase__add:disabled {
     opacity: 0.45;
     cursor: not-allowed;
   }
+  .purchase__note {
+    margin: 0;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+  }
   .purchase__view {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     text-transform: uppercase;
     letter-spacing: 2px;
     text-decoration: underline;
-  }
-  .purchase__low {
-    color: var(--muted);
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin: 0;
+    color: var(--accent);
   }
 </style>
