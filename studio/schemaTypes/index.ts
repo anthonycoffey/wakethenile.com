@@ -12,6 +12,8 @@ import {show} from './documents/show'
 import {video} from './documents/video'
 import {release} from './documents/release'
 import {product} from './documents/product'
+import {order} from './documents/order'
+import {commerceSettings} from './documents/commerceSettings'
 
 export const schemaTypes = [
   // objects
@@ -27,4 +29,6 @@ export const schemaTypes = [
   video,
   release,
   product,
+  order,
+  commerceSettings,
 ]
