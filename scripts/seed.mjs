@@ -59,6 +59,7 @@ async function main() {
       { _key: key(), label: 'Videos', href: '/videos' },
       { _key: key(), label: 'Connect', href: '/connect' },
       { _key: key(), label: 'Shows', href: '/shows' },
+      { _key: key(), label: 'Shop', href: '/shop' },
     ],
     socials: [
       { _key: key(), platform: 'Instagram', url: 'https://www.instagram.com/wakethenile/' },
@@ -132,6 +133,42 @@ async function main() {
       venueName: s.venueName, city: s.city, state: s.state,
       ticketsUrl: 'https://www.ticketmaster.com', ticketsLabel: 'Get Tickets',
       location: s.location, soldOut: false,
+    });
+  }
+
+  // Merch — sample products. Every purchasable option is a variant (the
+  // stock-keeping unit); single-option goods get one "One Size" variant.
+  const mkVariants = (rows) =>
+    rows.map((r) => ({ _key: key(), _type: 'variant', label: r.label, sku: r.sku, price: r.price, stock: r.stock }));
+  const products = [
+    {
+      id: 'product-champion-tee', title: 'Champion Tee', slug: 'champion-tee',
+      price: 25, taxCode: 'txcd_30011000',
+      variants: mkVariants([
+        { label: 'S', sku: 'TEE-CHMP-S', price: 25, stock: 8 },
+        { label: 'M', sku: 'TEE-CHMP-M', price: 25, stock: 12 },
+        { label: 'L', sku: 'TEE-CHMP-L', price: 25, stock: 10 },
+        { label: 'XL', sku: 'TEE-CHMP-XL', price: 25, stock: 6 },
+      ]),
+    },
+    {
+      id: 'product-snapback', title: 'Wake the Nile Snapback', slug: 'wtn-snapback',
+      price: 28, taxCode: 'txcd_99999999',
+      variants: mkVariants([{ label: 'One Size', sku: 'HAT-WTN-OS', price: 28, stock: 15 }]),
+    },
+    {
+      id: 'product-mercy-vinyl', title: 'Mercy — Limited Vinyl', slug: 'mercy-vinyl',
+      price: 32, taxCode: 'txcd_99999999',
+      variants: mkVariants([{ label: 'One Size', sku: 'VNL-MERCY-OS', price: 32, stock: 4 }]),
+    },
+  ];
+  for (const p of products) {
+    docs.push({
+      _id: p.id, _type: 'product', title: p.title,
+      slug: { _type: 'slug', current: p.slug },
+      price: p.price, taxCode: p.taxCode, active: true, soldOut: false,
+      variants: p.variants,
+      seo: { metaDescription: `${p.title} — official Wake the Nile merch.` },
     });
   }
 

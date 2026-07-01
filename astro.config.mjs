@@ -5,9 +5,11 @@ import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
 
 // https://astro.build/config
-// Phase A is fully static (no server routes) → no adapter needed; deploy dist/
-// to Cloudflare Pages. When v2 adds a contact Worker, re-add @astrojs/cloudflare
-// and switch output to 'server'/'hybrid'.
+// Fully static site. Commerce server logic runs as Cloudflare Pages Functions
+// (the functions/ directory), which the Git-connected Pages build compiles
+// automatically — no adapter/SSR, so the static build stays fast and deploys
+// cleanly. The functions are edge-native (raw fetch to Stripe + Sanity), so no
+// nodejs_compat flag or Node-version pinning is required.
 export default defineConfig({
   site: 'https://wakethenile.com',
   output: 'static',
@@ -17,10 +19,7 @@ export default defineConfig({
     plugins: [tailwindcss()],
   },
   build: {
-    // Emit flat files (/videos.html) instead of /videos/index.html so Cloudflare
-    // Pages serves clean, extensionless URLs with NO trailing-slash redirect.
     format: 'file',
-    // Inline CSS into the document head to kill the render-blocking round-trip.
     inlineStylesheets: 'always',
   },
   prefetch: {

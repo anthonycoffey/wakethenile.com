@@ -34,10 +34,17 @@ export async function sanityFetch<T>(
 ): Promise<T> {
   const client = getSanityClient();
   if (!client) return fallback;
-  try {
-    return await client.fetch<T>(query, params);
-  } catch (err) {
-    console.error('[sanity] query failed:', err);
-    return fallback;
+  // Retry transient CDN/network failures before falling back to empty — a
+  // single blip during the build otherwise ships a contentless page.
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await client.fetch<T>(query, params);
+    } catch (err) {
+      lastErr = err;
+      await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+    }
   }
+  console.error('[sanity] query failed after 3 attempts:', lastErr);
+  return fallback;
 }

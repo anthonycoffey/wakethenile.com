@@ -1,0 +1,89 @@
+---
+import { urlForWidth } from '../lib/sanityImage';
+import { formatPrice } from '../lib/format';
+import type { ProductCardData } from '../lib/types';
+
+interface Props {
+  product: ProductCardData;
+}
+const { product } = Astro.props;
+
+const img = urlForWidth(product.images?.[0], 800) ?? undefined;
+const href = `/shop/${product.slug}`;
+const soldOut = product.inStock === false;
+---
+
+<a class="pcard" href={href}>
+  <div class="pcard__media">
+    {img
+      ? <img src={img} alt={product.title ?? ''} loading="lazy" />
+      : <span class="pcard__placeholder" aria-hidden="true" />}
+    {soldOut && <span class="pcard__badge">Sold Out</span>}
+  </div>
+  <p class="pcard__title">{product.title}</p>
+  <p class="pcard__price">{formatPrice(product.fromPrice)}</p>
+</a>
+
+<style>
+  .pcard {
+    display: block;
+    color: var(--accent);
+    text-decoration: none;
+    text-align: center;
+  }
+  .pcard__media {
+    position: relative;
+    aspect-ratio: 4 / 5;
+    background: #111;
+    overflow: hidden;
+    margin-bottom: 0.9rem;
+  }
+  .pcard__media img,
+  .pcard__placeholder {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .pcard__media img {
+    transition: transform 0.5s ease;
+  }
+  .pcard:hover .pcard__media img {
+    transform: scale(1.05);
+  }
+  .pcard__placeholder {
+    background: repeating-linear-gradient(
+      45deg,
+      #141414,
+      #141414 12px,
+      #1a1a1a 12px,
+      #1a1a1a 24px
+    );
+  }
+  .pcard__badge {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    background: rgba(0, 0, 0, 0.8);
+    color: var(--accent);
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding: 0.3rem 0.6rem;
+  }
+  .pcard__title {
+    margin: 0;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.95rem;
+    line-height: 1.3;
+  }
+  .pcard__price {
+    margin: 0.3rem 0 0;
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+</style>

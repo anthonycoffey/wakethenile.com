@@ -1,0 +1,49 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import CheckoutReturn from '../../components/CheckoutReturn.tsx';
+---
+
+<BaseLayout title="Order" footer="scroll">
+  <section class="return">
+    <CheckoutReturn client:load />
+  </section>
+</BaseLayout>
+
+<style>
+  .return {
+    max-width: 640px;
+    margin-inline: auto;
+    padding: calc(12vh + 4.5rem) 1.25rem 6rem;
+    text-align: center;
+  }
+  .return :global(.return__title) {
+    color: var(--accent);
+    font-size: clamp(2.25rem, 1.8rem + 2.5vw, 3.5rem);
+    margin-bottom: 1rem;
+  }
+  .return :global(.return__lead) {
+    color: var(--accent);
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+  }
+  .return :global(.return__sub) {
+    color: var(--muted);
+    margin-bottom: 2rem;
+  }
+  .return :global(.return__btn) {
+    display: inline-block;
+    border: 2px solid var(--accent);
+    color: var(--accent);
+    border-radius: 100px;
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 1px;
+    padding: 0.7rem 1.4rem;
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+  .return :global(.return__btn:hover) {
+    background: var(--accent);
+    color: var(--accent-ink);
+    text-decoration: none;
+  }
+</style>
