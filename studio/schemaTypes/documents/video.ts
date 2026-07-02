@@ -33,7 +33,8 @@ export const video = defineType({
     defineField({
       name: 'videoUrl',
       title: 'Video file URL',
-      type: 'url',
+      type: 'string',
+      description: 'Absolute URL or a site-relative path like /videos/clip.mp4.',
       hidden: ({parent}) => parent?.source !== 'url',
     }),
     defineField({
