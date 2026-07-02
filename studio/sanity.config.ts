@@ -26,15 +26,23 @@ export default defineConfig({
                 S.document().schemaType('siteSettings').documentId('siteSettings'),
               ),
             S.divider(),
-            // Phase A collections
+            // Content
             S.documentTypeListItem('page').title('Pages'),
             S.documentTypeListItem('show').title('Shows'),
             S.documentTypeListItem('video').title('Videos'),
-            // Deferred (v2) — present in schema, kept out of the way for now
+            S.documentTypeListItem('release').title('Releases'),
+            S.documentTypeListItem('post').title('Blog posts'),
             S.divider(),
-            S.documentTypeListItem('release').title('Releases (v2)'),
-            S.documentTypeListItem('post').title('Blog posts (v2)'),
-            S.documentTypeListItem('product').title('Merch (v2)'),
+            // Merch / commerce
+            S.documentTypeListItem('product').title('Merch'),
+            S.documentTypeListItem('productCategory').title('Categories'),
+            S.documentTypeListItem('order').title('Orders'),
+            S.listItem()
+              .title('Commerce settings')
+              .id('commerceSettings')
+              .child(
+                S.document().schemaType('commerceSettings').documentId('commerceSettings'),
+              ),
           ]),
     }),
     visionTool({ defaultApiVersion: '2026-03-01' }),
@@ -42,7 +50,8 @@ export default defineConfig({
 
   schema: {
     types: schemaTypes,
-    // Hide the singleton from the global "create new" menu.
-    templates: (templates) => templates.filter((t) => t.schemaType !== 'siteSettings'),
+    // Hide singletons from the global "create new" menu.
+    templates: (templates) =>
+      templates.filter((t) => t.schemaType !== 'siteSettings' && t.schemaType !== 'commerceSettings'),
   },
 });

@@ -229,13 +229,14 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
       }
     }
 
-    // Build stock-decrement patches grouped by product, targeting variants by _key.
+    // Build stock-decrement patches grouped by product. Variant lines target the
+    // variant by _key; variant-less lines decrement the product's base `stock`.
     const decByProduct = new Map<string, Record<string, number>>();
     for (const li of lineItems) {
+      if (!li.productId) continue;
       const key = variantKeyBySku.get(`${li.productId}::${li.sku}`);
-      if (!li.productId || !key) continue;
       const dec = decByProduct.get(li.productId) ?? {};
-      const path = `variants[_key=="${key}"].stock`;
+      const path = key ? `variants[_key=="${key}"].stock` : 'stock';
       dec[path] = (dec[path] ?? 0) + li.qty;
       decByProduct.set(li.productId, dec);
     }

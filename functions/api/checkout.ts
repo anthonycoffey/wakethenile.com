@@ -72,7 +72,7 @@ async function sanityQuery<T>(env: Env, query: string, params: Record<string, un
 }
 
 const PRODUCTS_QUERY = `*[_type == "product" && !(_id in path("drafts.**")) && _id in $ids]{
-  _id, title, price, taxCode, active, soldOut, "imageUrl": images[0].asset->url,
+  _id, title, price, stock, taxCode, "imageUrl": images[0].asset->url,
   variants[]{ label, sku, price, stock }
 }`;
 
@@ -127,19 +127,19 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
   const line_items: Record<string, unknown>[] = [];
   for (const item of items) {
     const p = byId.get(item.productId);
-    if (!p || p.active === false || p.soldOut === true) {
+    if (!p) {
       return json({ error: `"${p?.title || 'An item'}" is no longer available.` }, 409);
     }
     const variant = (p.variants || []).find((v: any) => v.sku === item.sku);
     const unit: number = variant ? (variant.price ?? p.price) : p.price;
-    const stock: number = variant ? (variant.stock ?? 0) : Infinity;
+    // Stock is authoritative: no variants → base stock; else the variant's. 0 = sold out.
+    const stock: number = variant ? (variant.stock ?? 0) : (p.stock ?? 0);
     const qty = Math.max(1, Math.floor(Number(item.qty) || 1));
+    const which = variant?.label ? `${p.title} — ${variant.label}` : p.title;
 
     if (!unit || unit <= 0) return json({ error: `"${p.title}" is not purchasable.` }, 409);
-    if (stock < qty) {
-      const which = variant?.label ? `${p.title} — ${variant.label}` : p.title;
-      return json({ error: `Only ${stock} of "${which}" left in stock.` }, 409);
-    }
+    if (stock <= 0) return json({ error: `"${which}" is sold out.` }, 409);
+    if (stock < qty) return json({ error: `Only ${stock} of "${which}" left in stock.` }, 409);
 
     const product_data: Record<string, unknown> = {
       name: variant?.label ? `${p.title} — ${variant.label}` : p.title,

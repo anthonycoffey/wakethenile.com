@@ -50,30 +50,35 @@ export const pastShowsQuery = `*[_type == "show" && ${NOT_DRAFT} && dateTime(dat
 
 const VARIANT = `{ label, sku, price, stock }`;
 
+// A product is live when it's published (unpublish/delete to pull it) and
+// in stock. Sold-out is derived: no variants → base stock; else any variant.
+const IN_STOCK = `select(
+    count(variants) > 0 => count(variants[coalesce(stock, 0) > 0]) > 0,
+    coalesce(stock, 0) > 0
+  )`;
+
 // Grid card: enough to render a tile + a derived "from" price and stock state.
-export const allProductsQuery = `*[_type == "product" && ${NOT_DRAFT} && active == true] | order(title asc){
-  _id, title, "slug": slug.current, images, price, soldOut,
+export const allProductsQuery = `*[_type == "product" && ${NOT_DRAFT}] | order(title asc){
+  _id, title, "slug": slug.current, images, price,
   "category": category->title, tags,
   variants[]${VARIANT},
   "fromPrice": coalesce(price, math::min(variants[].price)),
-  "inStock": soldOut != true && (
-    count(variants) == 0 || count(variants[coalesce(stock, 0) > 0]) > 0
-  )
+  "inStock": ${IN_STOCK}
 }`;
 
 export const productBySlugQuery = `*[_type == "product" && ${NOT_DRAFT} && slug.current == $slug][0]{
-  _id, title, "slug": slug.current, images, description, price, soldOut, active, taxCode,
+  _id, title, "slug": slug.current, images, description, price, stock, taxCode,
   variants[]${VARIANT},
   ${SEO}
 }`;
 
-// Only need slugs of purchasable products for getStaticPaths.
-export const allProductSlugsQuery = `*[_type == "product" && ${NOT_DRAFT} && active == true && defined(slug.current)]{
+// Only need slugs of published products for getStaticPaths.
+export const allProductSlugsQuery = `*[_type == "product" && ${NOT_DRAFT} && defined(slug.current)]{
   "slug": slug.current
 }`;
 
-// Optional cover for the /shop landing (reuses the COVER `page` model).
-export const shopPageQuery = `*[_type == "page" && (slug.current == "shop" || _id == "page-shop")][0]${PAGE}`;
+// Optional cover for the /merch landing (reuses the COVER `page` model).
+export const shopPageQuery = `*[_type == "page" && (slug.current == "merch" || _id == "page-merch")][0]${PAGE}`;
 
 export const commerceSettingsQuery = `*[_type == "commerceSettings" && _id == "commerceSettings"][0]{
   currency, allowedShippingCountries, defaultTaxCode, enableTax, lowStockThreshold, storeEnabled,
@@ -82,6 +87,6 @@ export const commerceSettingsQuery = `*[_type == "commerceSettings" && _id == "c
 
 // Server-side authoritative lookup for checkout validation (fresh price + stock).
 export const productsForCheckoutQuery = `*[_type == "product" && ${NOT_DRAFT} && _id in $ids]{
-  _id, title, price, taxCode, active, soldOut, "image": images[0],
+  _id, title, price, stock, taxCode, "image": images[0],
   variants[]{ label, sku, price, stock }
 }`;

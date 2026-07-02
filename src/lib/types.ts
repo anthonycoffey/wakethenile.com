@@ -97,12 +97,12 @@ export interface Product {
   description?: unknown[];
   /** Base price (USD). Variants may override per-option. */
   price?: number;
-  active?: boolean;
+  /** Base stock (units) for products with no variants; 0 = sold out. */
+  stock?: number;
   /** Stripe Tax product tax code; falls back to the store default. */
   taxCode?: string;
-  soldOut?: boolean;
   variants?: ProductVariant[];
-  /** Dereferenced category title (for /shop filters). */
+  /** Dereferenced category title (for /merch filters). */
   category?: string;
   tags?: string[];
   seo?: SeoFields;
