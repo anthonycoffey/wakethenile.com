@@ -469,7 +469,7 @@
   align-items: stretch;
   width: 300px;
   background: transparent;
-  border: 2px solid var(--accent);
+  border: 1.5px solid var(--accent);
   border-radius: 10px;
   overflow: hidden;
   cursor: pointer;
@@ -488,15 +488,11 @@
 .shopb__chips::-webkit-scrollbar {
   display: none;
 }
-/* Centre the placeholder; left-align chips so overflow scrolls from the start. */
-.shopb__chips--empty {
-  justify-content: center;
-}
 .shopb__placeholder {
   color: color-mix(in srgb, var(--accent) 65%, transparent);
   font-size: 0.8rem;
   font-weight: 600;
-  letter-spacing: 1px;
+  letter-spacing: 2.5px;
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -532,9 +528,10 @@
   color: var(--accent);
   border-left: 2px solid var(--accent);
 }
+/* Big chevron — fills ~half the square caret box. */
 .shopb__caret-icon {
-  font-size: 1.05rem;
-  line-height: 1;
+  width: 24px;
+  height: 24px;
   transition: transform 0.2s ease;
 }
 .shopb__caret-icon.is-open {

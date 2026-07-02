@@ -89,7 +89,7 @@ export default function ShopBrowser({ products }: { products: BrowserProduct[] }
                 }
               }}
             >
-              <div className={`shopb__chips${selected.size === 0 ? ' shopb__chips--empty' : ''}`}>
+              <div className="shopb__chips">
                 {selected.size === 0 ? (
                   <span className="shopb__placeholder">filter products</span>
                 ) : (
@@ -111,7 +111,17 @@ export default function ShopBrowser({ products }: { products: BrowserProduct[] }
                 )}
               </div>
               <span className="shopb__caret" aria-hidden="true">
-                <span className={`shopb__caret-icon${open ? ' is-open' : ''}`}>▾</span>
+                <svg
+                  className={`shopb__caret-icon${open ? ' is-open' : ''}`}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
               </span>
             </div>
             {open && (
