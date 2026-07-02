@@ -21,7 +21,11 @@ const { title, description, seo, footer = 'fixed' } = Astro.props;
 
 const settings = await sanityFetch<SiteSettings | null>(siteSettingsQuery, {}, null);
 const siteTitle = settings?.title ?? 'Wake the Nile';
-const nav = settings?.nav ?? [];
+// Hide the Merch link from the nav when the store toggle is off (defaults on).
+const merchEnabled = settings?.merchEnabled !== false;
+const nav = (settings?.nav ?? []).filter(
+  (item) => merchEnabled || !(item.href ?? '').startsWith('/merch'),
+);
 const socials = settings?.socials ?? [];
 
 const metaTitle = seo?.metaTitle ?? title ?? siteTitle;

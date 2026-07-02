@@ -32,6 +32,15 @@ export const siteSettings = defineType({
       ],
     }),
     defineField({
+      name: 'merchEnabled',
+      title: 'Show merch in navigation',
+      type: 'boolean',
+      description:
+        'When off, the Merch link is hidden from the site navigation. The /merch page still ' +
+        'exists but is unlinked — turn this off to launch the site while the store is still in progress.',
+      initialValue: true,
+    }),
+    defineField({
       name: 'socials',
       title: 'Social links',
       type: 'array',

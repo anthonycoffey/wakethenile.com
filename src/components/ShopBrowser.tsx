@@ -89,7 +89,7 @@ export default function ShopBrowser({ products }: { products: BrowserProduct[] }
                 }
               }}
             >
-              <div className="shopb__chips">
+              <div className={`shopb__chips${selected.size === 0 ? ' shopb__chips--empty' : ''}`}>
                 {selected.size === 0 ? (
                   <span className="shopb__placeholder">filter products</span>
                 ) : (
@@ -98,6 +98,7 @@ export default function ShopBrowser({ products }: { products: BrowserProduct[] }
                       key={c}
                       type="button"
                       className="shopb__chip"
+                      title={`Remove ${c} filter`}
                       aria-label={`Remove ${c} filter`}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -105,9 +106,6 @@ export default function ShopBrowser({ products }: { products: BrowserProduct[] }
                       }}
                     >
                       {c}
-                      <span className="shopb__chip-x" aria-hidden="true">
-                        ×
-                      </span>
                     </button>
                   ))
                 )}
