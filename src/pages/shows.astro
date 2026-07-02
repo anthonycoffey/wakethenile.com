@@ -27,7 +27,6 @@ const overlayOpacity = typeof ov?.opacity === 'number' ? ov.opacity : 0.5;
     )}
     <div class="shows__content">
       <h1 class="shows__title">Shows</h1>
-      <hr class="shows__divider" />
       <ShowList upcoming={upcoming} past={past} />
     </div>
   </section>
@@ -55,20 +54,14 @@ const overlayOpacity = typeof ov?.opacity === 'number' ? ov.opacity : 0.5;
   .shows__content {
     position: relative;
     z-index: 1;
-    padding: 40vh 1.25rem 2rem;
+    /* Sit ~100px higher than before while still letting the cover breathe. */
+    padding: calc(40vh - 100px) 1.25rem 2rem;
   }
   .shows__title {
     text-align: center;
     color: var(--accent);
     font-size: clamp(3.5rem, 3rem + 4vw, 5.5rem);
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
     letter-spacing: -0.02em;
-  }
-  .shows__divider {
-    border: none;
-    border-top: 1px solid var(--accent);
-    margin: 0 auto 2rem;
-    max-width: 640px;
-    opacity: 0.5;
   }
 </style>

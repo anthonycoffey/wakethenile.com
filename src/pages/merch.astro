@@ -1,0 +1,47 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ShopBrowser from '../components/ShopBrowser.tsx';
+import type { BrowserProduct } from '../components/ShopBrowser.tsx';
+import { sanityFetch } from '../lib/sanity';
+import { allProductsQuery } from '../lib/queries';
+import { urlForWidth } from '../lib/sanityImage';
+import type { ProductCardData } from '../lib/types';
+
+const products = await sanityFetch<ProductCardData[]>(allProductsQuery, {}, []);
+
+// Resolve image URLs server-side (the hydrated island has no Sanity creds).
+const items: BrowserProduct[] = products.map((p) => ({
+  id: p._id,
+  slug: p.slug ?? '',
+  title: p.title ?? '',
+  image: urlForWidth(p.images?.[0], 800) ?? undefined,
+  fromPrice: p.fromPrice,
+  inStock: p.inStock !== false,
+  category: p.category,
+  tags: p.tags,
+}));
+---
+
+<BaseLayout title="Merch" description="Official Wake the Nile merch." footer="scroll">
+  <section class="merch">
+    <h1 class="merch__title">Merch</h1>
+    <ShopBrowser client:load products={items} />
+  </section>
+</BaseLayout>
+
+<style>
+  .merch {
+    max-width: 1200px;
+    margin-inline: auto;
+    padding: calc(8vh + 4.5rem) 1.5rem 6rem;
+  }
+  /* Consistent with Connect/Shows titles. Count + filters live in the island
+     bar below, so the gap down to the grid is tighter. */
+  .merch__title {
+    color: var(--accent);
+    font-size: clamp(3.5rem, 3rem + 4vw, 5.5rem);
+    letter-spacing: -0.02em;
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+</style>

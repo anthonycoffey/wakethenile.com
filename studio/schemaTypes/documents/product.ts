@@ -1,10 +1,15 @@
 import {defineType, defineField, defineArrayMember} from 'sanity'
 
 /**
- * Optional self-hosted merch product. Use this ONLY if Sanity is your source of
- * truth for merch (e.g. paired with Stripe / Snipcart). If you use Shopify as
- * the backend, products live in Shopify and this type can be omitted or kept thin
- * as a curated "featured merch" list referencing Shopify handles.
+ * Merch product sold through the site's own Stripe checkout — Sanity is the
+ * source of truth for catalog, price, and stock.
+ *
+ * - A product with a single SKU uses the base price + stock below.
+ * - A product with options (e.g. sizes) uses per-variant price + stock; the
+ *   base stock is ignored when variants exist.
+ *
+ * Stock auto-decrements on each completed order; stock 0 = sold out. To pull a
+ * product from the shop, unpublish or delete it — there is no "active" flag.
  */
 export const product = defineType({
   name: 'product',
@@ -30,15 +35,26 @@ export const product = defineType({
       name: 'price',
       title: 'Price (USD)',
       type: 'number',
-      description: 'Display price. Authoritative price/charge should come from the payment provider.',
+      description: 'Base price. Variants can override this per option.',
+      validation: (Rule) => Rule.min(0),
+    }),
+    defineField({
+      name: 'stock',
+      title: 'Stock on hand',
+      type: 'number',
+      description:
+        'Units available for products with no variants. Auto-decrements on each sale; 0 = sold out. ' +
+        'Ignored when the product has variants (each variant tracks its own stock).',
+      initialValue: 0,
+      validation: (Rule) => Rule.min(0).integer(),
     }),
     defineField({
       name: 'variants',
       title: 'Variants',
       type: 'array',
       description:
-        'One entry per purchasable option (e.g. each size). If a product has no variants, ' +
-        'the base price/stock below are used.',
+        'One entry per purchasable option (e.g. each size). Leave empty for a single-SKU product ' +
+        'and use the base price/stock above.',
       of: [
         defineArrayMember({
           type: 'object',
@@ -73,11 +89,18 @@ export const product = defineType({
       ],
     }),
     defineField({
-      name: 'active',
-      title: 'Active (available for purchase)',
-      type: 'boolean',
-      description: 'Uncheck to hide from the shop and block checkout without deleting the product.',
-      initialValue: true,
+      name: 'category',
+      title: 'Category',
+      type: 'reference',
+      to: [{type: 'productCategory'}],
+      description: 'Powers the /merch filters.',
+    }),
+    defineField({
+      name: 'tags',
+      title: 'Tags',
+      type: 'array',
+      of: [defineArrayMember({type: 'string'})],
+      options: {layout: 'tags'},
     }),
     defineField({
       name: 'taxCode',
@@ -87,7 +110,6 @@ export const product = defineType({
         'Stripe Tax product tax code (e.g. txcd_99999999 general goods, txcd_30011000 apparel). ' +
         'Falls back to the store default when blank.',
     }),
-    defineField({name: 'soldOut', title: 'Sold out (manual override)', type: 'boolean', initialValue: false}),
     defineField({name: 'seo', title: 'SEO', type: 'seo'}),
   ],
   preview: {

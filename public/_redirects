@@ -1,0 +1,2 @@
+/shop      /merch         301
+/shop/*    /merch/:splat  301

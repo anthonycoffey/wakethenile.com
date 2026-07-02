@@ -17,6 +17,8 @@ export interface ProductPurchaseProps {
   image?: string;
   /** Base price used when a variant has no override. */
   basePrice?: number;
+  /** Base stock used when the product has no variants. */
+  baseStock?: number;
   variants: PurchaseVariant[];
 }
 
@@ -26,6 +28,7 @@ export default function ProductPurchase({
   title,
   image,
   basePrice,
+  baseStock,
   variants,
 }: ProductPurchaseProps) {
   const hasVariants = variants.length > 0;
@@ -42,8 +45,9 @@ export default function ProductPurchase({
   );
 
   const unitPrice = hasVariants ? (selected?.price ?? basePrice ?? 0) : (basePrice ?? 0);
-  const stock = hasVariants ? (selected?.stock ?? 0) : Infinity;
-  const soldOut = hasVariants ? stock <= 0 : false;
+  // Stock is authoritative for both paths now; 0 = sold out.
+  const stock = hasVariants ? (selected?.stock ?? 0) : (baseStock ?? 0);
+  const soldOut = stock <= 0;
   const canAdd = unitPrice > 0 && !soldOut && qty > 0;
   // A single unlabeled "One Size" variant reads better as a plain buy button.
   const showSizes = hasVariants && !(variants.length === 1 && /one size/i.test(variants[0].label));
@@ -63,7 +67,7 @@ export default function ProductPurchase({
       sku: hasVariants ? sku : slug,
       variantLabel: selected?.label,
       unitPrice,
-      qty: Math.min(qty, stock === Infinity ? qty : stock),
+      qty: Math.min(qty, stock),
       image,
     });
     setAdded(true);
@@ -112,8 +116,8 @@ export default function ProductPurchase({
             type="button"
             className="purchase__qtybtn"
             aria-label="Increase quantity"
-            disabled={stock !== Infinity && qty >= stock}
-            onClick={() => setQty((q) => (stock === Infinity ? q + 1 : Math.min(stock, q + 1)))}
+            disabled={qty >= stock}
+            onClick={() => setQty((q) => Math.min(stock, q + 1))}
           >
             +
           </button>
@@ -129,7 +133,7 @@ export default function ProductPurchase({
           View cart →
         </a>
       )}
-      {!soldOut && stock !== Infinity && stock <= 5 && (
+      {!soldOut && stock <= 5 && (
         <p className="purchase__note">Only {stock} left in stock</p>
       )}
     </div>

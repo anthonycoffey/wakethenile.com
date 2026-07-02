@@ -6,5 +6,6 @@ const dataset = process.env.SANITY_STUDIO_DATASET || 'production';
 export default defineCliConfig({
   api: { projectId, dataset },
   studioHost: 'wakethenile',
+  deployment: { appId: 't2s4tycu0m9tyhcg6m96yn6y' },
   autoUpdates: true,
 });
