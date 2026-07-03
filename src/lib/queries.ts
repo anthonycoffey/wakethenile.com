@@ -16,7 +16,7 @@ const PAGE = `{
 }`;
 
 export const siteSettingsQuery = `*[_type == "siteSettings" && _id == "siteSettings"][0]{
-  title, tagline, logo,
+  title, tagline, logo, merchEnabled,
   nav[]{label, href},
   socials[]{platform, url},
   defaultSeo{metaTitle, metaDescription, ogImage, noIndex},

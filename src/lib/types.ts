@@ -21,6 +21,8 @@ export interface SiteSettings {
   title?: string;
   tagline?: string;
   logo?: SanityImageSource;
+  /** When false, the Merch link is hidden from the site navigation. */
+  merchEnabled?: boolean;
   nav?: NavItem[];
   socials?: SocialLink[];
   defaultSeo?: SeoFields;

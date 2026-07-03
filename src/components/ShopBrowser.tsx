@@ -98,6 +98,7 @@ export default function ShopBrowser({ products }: { products: BrowserProduct[] }
                       key={c}
                       type="button"
                       className="shopb__chip"
+                      title={`Remove ${c} filter`}
                       aria-label={`Remove ${c} filter`}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -105,15 +106,22 @@ export default function ShopBrowser({ products }: { products: BrowserProduct[] }
                       }}
                     >
                       {c}
-                      <span className="shopb__chip-x" aria-hidden="true">
-                        ×
-                      </span>
                     </button>
                   ))
                 )}
               </div>
               <span className="shopb__caret" aria-hidden="true">
-                <span className={`shopb__caret-icon${open ? ' is-open' : ''}`}>▾</span>
+                <svg
+                  className={`shopb__caret-icon${open ? ' is-open' : ''}`}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
               </span>
             </div>
             {open && (
