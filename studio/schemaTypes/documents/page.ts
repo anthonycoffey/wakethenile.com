@@ -64,6 +64,13 @@ export const page = defineType({
           initialValue: 0.4,
           validation: (Rule) => Rule.min(0).max(1),
         },
+        {
+          name: 'duotone',
+          title: 'Gold duotone effect',
+          type: 'boolean',
+          initialValue: false,
+          description: 'Apply the brand gold duotone filter to the cover image.',
+        },
       ],
     }),
     defineField({name: 'heading', title: 'Title', type: 'string',
