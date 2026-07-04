@@ -8,6 +8,8 @@ interface ImportMetaEnv {
   readonly PUBLIC_GA4_MEASUREMENT_ID?: string;
   readonly PUBLIC_GOOGLE_MAPS_API_KEY?: string;
   readonly PUBLIC_R2_VIDEO_BASE?: string;
+  /** Cloudflare Pages build var: the Git branch being deployed. */
+  readonly CF_PAGES_BRANCH?: string;
 }
 
 interface ImportMeta {
