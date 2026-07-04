@@ -5,6 +5,7 @@ import FooterHome from '../components/FooterHome.astro';
 import FooterFixed from '../components/FooterFixed.astro';
 import FooterScroll from '../components/FooterScroll.astro';
 import { sanityFetch } from '../lib/sanity';
+import { isPreviewDeploy } from '../lib/env';
 import { siteSettingsQuery } from '../lib/queries';
 import { urlFor } from '../lib/sanityImage';
 import type { SiteSettings, SeoFields } from '../lib/types';
@@ -21,8 +22,10 @@ const { title, description, seo, footer = 'fixed' } = Astro.props;
 
 const settings = await sanityFetch<SiteSettings | null>(siteSettingsQuery, {}, null);
 const siteTitle = settings?.title ?? 'Wake the Nile';
-// Hide the Merch link from the nav when the store toggle is off (defaults on).
-const merchEnabled = settings?.merchEnabled !== false;
+// The CMS merch toggle only gates the live production site. Preview branch and
+// local builds always show the Merch link so the store can be reviewed before
+// launch, regardless of the toggle's state.
+const merchEnabled = isPreviewDeploy || settings?.merchEnabled !== false;
 const nav = (settings?.nav ?? []).filter(
   (item) => merchEnabled || !(item.href ?? '').startsWith('/merch'),
 );
