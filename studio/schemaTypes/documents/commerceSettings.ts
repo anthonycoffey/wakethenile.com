@@ -9,7 +9,32 @@ export const commerceSettings = defineType({
   title: 'Store settings',
   type: 'document',
   fields: [
-    defineField({name: 'storeEnabled', title: 'Store enabled', type: 'boolean', initialValue: true}),
+    defineField({
+      name: 'storeEnabled',
+      title: 'Store enabled',
+      type: 'boolean',
+      initialValue: true,
+      description:
+        'Master switch for the storefront. When OFF, the live site enters maintenance mode: the ' +
+        'Merch nav link is hidden and /merch, product pages, /cart and /checkout all show the ' +
+        'maintenance page, and the checkout API refuses new orders. Preview deploys always show ' +
+        'the full store regardless, so it can be reviewed before launch.',
+    }),
+    defineField({
+      name: 'maintenanceHeading',
+      title: 'Maintenance page heading',
+      type: 'string',
+      description: 'Shown when the store is disabled. Defaults to “We’ll be right back”.',
+    }),
+    defineField({
+      name: 'maintenanceMessage',
+      title: 'Maintenance page message',
+      type: 'text',
+      rows: 3,
+      description:
+        'Shown under the heading on the maintenance page. Defaults to a generic “closed for ' +
+        'maintenance” note.',
+    }),
     defineField({
       name: 'currency',
       title: 'Currency',

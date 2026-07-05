@@ -6,9 +6,9 @@ import FooterFixed from '../components/FooterFixed.astro';
 import FooterScroll from '../components/FooterScroll.astro';
 import { sanityFetch } from '../lib/sanity';
 import { isPreviewDeploy } from '../lib/env';
-import { siteSettingsQuery } from '../lib/queries';
+import { commerceSettingsQuery, siteSettingsQuery } from '../lib/queries';
 import { urlFor } from '../lib/sanityImage';
-import type { SiteSettings, SeoFields } from '../lib/types';
+import type { SiteSettings, CommerceSettings, SeoFields } from '../lib/types';
 
 interface Props {
   title?: string;
@@ -21,13 +21,15 @@ interface Props {
 const { title, description, seo, footer = 'fixed' } = Astro.props;
 
 const settings = await sanityFetch<SiteSettings | null>(siteSettingsQuery, {}, null);
+const commerce = await sanityFetch<CommerceSettings | null>(commerceSettingsQuery, {}, null);
 const siteTitle = settings?.title ?? 'Wake the Nile';
-// The CMS merch toggle only gates the live production site. Preview branch and
-// local builds always show the Merch link so the store can be reviewed before
-// launch, regardless of the toggle's state.
-const merchEnabled = isPreviewDeploy || settings?.merchEnabled !== false;
+// `storeEnabled` on commerceSettings is the single source of truth for the
+// storefront. When it's off the live site hides the Merch nav link (and the
+// store pages render the maintenance page). Preview branch and local builds
+// always show the store so it can be reviewed before launch.
+const storeOpen = isPreviewDeploy || commerce?.storeEnabled !== false;
 const nav = (settings?.nav ?? []).filter(
-  (item) => merchEnabled || !(item.href ?? '').startsWith('/merch'),
+  (item) => storeOpen || !(item.href ?? '').startsWith('/merch'),
 );
 const socials = settings?.socials ?? [];
 

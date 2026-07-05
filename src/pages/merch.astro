@@ -2,31 +2,41 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import ShopBrowser from '../components/ShopBrowser.tsx';
 import type { BrowserProduct } from '../components/ShopBrowser.tsx';
+import StoreClosed from '../components/StoreClosed.astro';
 import { sanityFetch } from '../lib/sanity';
 import { allProductsQuery } from '../lib/queries';
 import { urlForWidth } from '../lib/sanityImage';
+import { getStoreStatus } from '../lib/store';
 import type { ProductCardData } from '../lib/types';
 
-const products = await sanityFetch<ProductCardData[]>(allProductsQuery, {}, []);
+const { open, settings } = await getStoreStatus();
 
 // Resolve image URLs server-side (the hydrated island has no Sanity creds).
-const items: BrowserProduct[] = products.map((p) => ({
-  id: p._id,
-  slug: p.slug ?? '',
-  title: p.title ?? '',
-  image: urlForWidth(p.images?.[0], 800) ?? undefined,
-  fromPrice: p.fromPrice,
-  inStock: p.inStock !== false,
-  category: p.category,
-  tags: p.tags,
-}));
+let items: BrowserProduct[] = [];
+if (open) {
+  const products = await sanityFetch<ProductCardData[]>(allProductsQuery, {}, []);
+  items = products.map((p) => ({
+    id: p._id,
+    slug: p.slug ?? '',
+    title: p.title ?? '',
+    image: urlForWidth(p.images?.[0], 800) ?? undefined,
+    fromPrice: p.fromPrice,
+    inStock: p.inStock !== false,
+    category: p.category,
+    tags: p.tags,
+  }));
+}
 ---
 
-<BaseLayout title="Merch" description="Official Wake the Nile merch." footer="scroll">
-  <section class="merch">
-    <h1 class="merch__title">Merch</h1>
-    <ShopBrowser client:load products={items} />
-  </section>
+<BaseLayout title={open ? 'Merch' : 'Shop'} description="Official Wake the Nile merch." footer="scroll">
+  {open ? (
+    <section class="merch">
+      <h1 class="merch__title">Merch</h1>
+      <ShopBrowser client:load products={items} />
+    </section>
+  ) : (
+    <StoreClosed settings={settings} />
+  )}
 </BaseLayout>
 
 <style>

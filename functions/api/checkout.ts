@@ -77,7 +77,7 @@ const PRODUCTS_QUERY = `*[_type == "product" && !(_id in path("drafts.**")) && _
 }`;
 
 const SETTINGS_QUERY = `*[_type == "commerceSettings" && _id == "commerceSettings"][0]{
-  currency, allowedShippingCountries, defaultTaxCode, enableTax,
+  storeEnabled, currency, allowedShippingCountries, defaultTaxCode, enableTax,
   shippingRates[]{ label, amount, taxCode, taxBehavior }
 }`;
 
@@ -115,6 +115,14 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
   } catch {
     return json({ error: 'Could not load products.' }, 502);
   }
+
+  // Honour the storefront master switch. `storeEnabled === false` is the only
+  // value that closes the store; a missing/failed settings fetch (null) fails
+  // open so a transient Sanity blip never blocks legitimate checkouts.
+  if (settings?.storeEnabled === false) {
+    return json({ error: 'The store is closed for maintenance.' }, 503);
+  }
+
   const byId = new Map<string, any>((products || []).map((p) => [p._id, p]));
 
   const currency: string = settings?.currency || DEFAULTS.currency;
