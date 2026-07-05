@@ -16,7 +16,7 @@ const PAGE = `{
 }`;
 
 export const siteSettingsQuery = `*[_type == "siteSettings" && _id == "siteSettings"][0]{
-  title, tagline, logo, merchEnabled,
+  title, tagline, logo,
   nav[]{label, href},
   socials[]{platform, url},
   defaultSeo{metaTitle, metaDescription, ogImage, noIndex},
@@ -82,6 +82,7 @@ export const shopPageQuery = `*[_type == "page" && (slug.current == "merch" || _
 
 export const commerceSettingsQuery = `*[_type == "commerceSettings" && _id == "commerceSettings"][0]{
   currency, allowedShippingCountries, defaultTaxCode, enableTax, lowStockThreshold, storeEnabled,
+  maintenanceHeading, maintenanceMessage,
   shippingRates[]{ label, amount, taxCode, taxBehavior }
 }`;
 

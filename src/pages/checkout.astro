@@ -1,16 +1,23 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import CheckoutCustom from '../components/CheckoutCustom.tsx';
+import StoreClosed from '../components/StoreClosed.astro';
+import { getStoreStatus } from '../lib/store';
 
 // PUBLIC_ vars are inlined at build time — safe to expose to the browser.
 const publishableKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY;
+const { open, settings } = await getStoreStatus();
 ---
 
-<BaseLayout title="Checkout" description="Secure checkout." footer="scroll">
-  <section class="checkout">
-    <h1 class="checkout__title">Checkout</h1>
-    <CheckoutCustom client:load publishableKey={publishableKey} />
-  </section>
+<BaseLayout title={open ? 'Checkout' : 'Shop'} description="Secure checkout." footer="scroll">
+  {open ? (
+    <section class="checkout">
+      <h1 class="checkout__title">Checkout</h1>
+      <CheckoutCustom client:load publishableKey={publishableKey} />
+    </section>
+  ) : (
+    <StoreClosed settings={settings} />
+  )}
 </BaseLayout>
 
 <style>

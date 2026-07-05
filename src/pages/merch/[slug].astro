@@ -2,10 +2,12 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import ProductPurchase from '../../components/ProductPurchase.tsx';
 import type { PurchaseVariant } from '../../components/ProductPurchase.tsx';
+import StoreClosed from '../../components/StoreClosed.astro';
 import { sanityFetch } from '../../lib/sanity';
 import { allProductSlugsQuery, productBySlugQuery } from '../../lib/queries';
 import { urlForWidth } from '../../lib/sanityImage';
 import { renderPortableText } from '../../lib/portableText';
+import { getStoreStatus } from '../../lib/store';
 import type { Product } from '../../lib/types';
 
 export async function getStaticPaths() {
@@ -14,27 +16,38 @@ export async function getStaticPaths() {
 }
 
 const { slug } = Astro.params;
-const product = await sanityFetch<Product | null>(productBySlugQuery, { slug }, null);
+const { open, settings } = await getStoreStatus();
 
-if (!product) {
+// Skip the product lookup entirely when the store is closed — the page renders
+// the maintenance view instead.
+const product = open
+  ? await sanityFetch<Product | null>(productBySlugQuery, { slug }, null)
+  : null;
+
+if (open && !product) {
   return Astro.redirect('/merch');
 }
 
-const gallery = (product.images ?? [])
-  .map((img) => urlForWidth(img, 1000))
-  .filter((u): u is string => !!u);
+const gallery = product
+  ? (product.images ?? [])
+      .map((img) => urlForWidth(img, 1000))
+      .filter((u): u is string => !!u)
+  : [];
 
-const variants: PurchaseVariant[] = (product.variants ?? []).map((v) => ({
-  label: v.label ?? '',
-  sku: v.sku ?? '',
-  price: typeof v.price === 'number' ? v.price : (product.price ?? 0),
-  stock: typeof v.stock === 'number' ? v.stock : 0,
-}));
+const variants: PurchaseVariant[] = product
+  ? (product.variants ?? []).map((v) => ({
+      label: v.label ?? '',
+      sku: v.sku ?? '',
+      price: typeof v.price === 'number' ? v.price : (product.price ?? 0),
+      stock: typeof v.stock === 'number' ? v.stock : 0,
+    }))
+  : [];
 
-const descriptionHtml = renderPortableText(product.description);
+const descriptionHtml = product ? renderPortableText(product.description) : '';
 ---
 
-<BaseLayout title={product.title} seo={product.seo} footer="scroll">
+<BaseLayout title={product ? product.title : 'Shop'} seo={product?.seo} footer="scroll">
+  {product ? (
   <section class="pdp">
     <a class="pdp__back" href="/merch">← Back to Merch</a>
 
@@ -76,6 +89,9 @@ const descriptionHtml = renderPortableText(product.description);
       </div>
     </div>
   </section>
+  ) : (
+    <StoreClosed settings={settings} />
+  )}
 </BaseLayout>
 
 <style>

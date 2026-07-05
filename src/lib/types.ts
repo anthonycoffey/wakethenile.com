@@ -21,8 +21,6 @@ export interface SiteSettings {
   title?: string;
   tagline?: string;
   logo?: SanityImageSource;
-  /** When false, the Merch link is hidden from the site navigation. */
-  merchEnabled?: boolean;
   nav?: NavItem[];
   socials?: SocialLink[];
   defaultSeo?: SeoFields;
@@ -128,7 +126,12 @@ export interface CommerceSettings {
   allowedShippingCountries?: string[];
   defaultTaxCode?: string;
   lowStockThreshold?: number;
+  /** Master storefront switch. When false the live site enters maintenance mode. */
   storeEnabled?: boolean;
+  /** Optional heading shown on the maintenance page when the store is disabled. */
+  maintenanceHeading?: string;
+  /** Optional body copy shown on the maintenance page when the store is disabled. */
+  maintenanceMessage?: string;
   shippingRates?: ShippingRate[];
 }
 

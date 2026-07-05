@@ -1,13 +1,21 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import CartPage from '../components/CartPage.tsx';
+import StoreClosed from '../components/StoreClosed.astro';
+import { getStoreStatus } from '../lib/store';
+
+const { open, settings } = await getStoreStatus();
 ---
 
-<BaseLayout title="Cart" description="Your Wake the Nile cart." footer="scroll">
-  <section class="cartpage-section">
-    <h1 class="cartpage-section__title">Your Cart</h1>
-    <CartPage client:load />
-  </section>
+<BaseLayout title={open ? 'Cart' : 'Shop'} description="Your Wake the Nile cart." footer="scroll">
+  {open ? (
+    <section class="cartpage-section">
+      <h1 class="cartpage-section__title">Your Cart</h1>
+      <CartPage client:load />
+    </section>
+  ) : (
+    <StoreClosed settings={settings} />
+  )}
 </BaseLayout>
 
 <style>
