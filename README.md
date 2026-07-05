@@ -7,6 +7,7 @@ templates), the client owns content (Sanity). No page builder.
 - **Live preview:** https://wakethenile.pages.dev
 - **Editing Studio:** https://wakethenile.sanity.studio
 - **Sanity project:** `c7fly3e4` / dataset `production`
+- **Documentation:** [`docs/`](./docs/README.md) — development standards, feature docs, specs & ADRs (we practice Document Driven Development)
 
 ## Stack
 - **Astro 5** static (`output: 'static'`, `build.format: 'file'` → clean extensionless URLs,
