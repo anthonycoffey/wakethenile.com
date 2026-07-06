@@ -8,6 +8,9 @@ import 'swiper/css';
 import 'swiper/css/effect-coverflow';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
+// Imported (not a runtime <style>) so these land in the render-blocking <head>
+// stylesheet and apply at first paint — critical for CLS (see VideoCoverflow.css).
+import './VideoCoverflow.css';
 
 interface Props {
   videos: CoverflowItem[];
@@ -17,6 +20,11 @@ export default function VideoCoverflow({ videos }: Props) {
   const videoRefs = useRef<Array<HTMLVideoElement | null>>([]);
   const [muted, setMuted] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
+  // Gate the reveal on Swiper finishing init. Until then the carousel is a
+  // left-aligned, untransformed strip; showing it would flash and then jump to
+  // the centered coverflow layout (a Cumulative Layout Shift). We keep Swiper
+  // at opacity:0 over a poster skeleton and cross-fade once it's laid out.
+  const [ready, setReady] = useState(false);
   // Mirror `muted` in a ref so the (per-render) video ref callback applies the
   // CURRENT state instead of hard-resetting to muted — otherwise paginating to
   // a new slide re-mutes it right after we unmute.
@@ -75,7 +83,24 @@ export default function VideoCoverflow({ videos }: Props) {
   }
 
   return (
-    <div className="coverflow">
+    <div className={`coverflow${ready ? ' is-ready' : ''}`}>
+      {/* Reserved-height stage: occupies the carousel's final footprint from
+          first paint so hydration adds zero layout shift. The skeleton fills it
+          until Swiper reveals over the top. */}
+      <div className="coverflow__stage">
+        <div className="coverflow__skeleton" aria-hidden="true">
+          {videos.slice(0, 3).map((v, i) => (
+            <div
+              key={v.id}
+              className={`coverflow__skeleton-card${i === 0 ? ' is-center' : ''}`}
+              // Poster as a background image, not an <img>: a background is
+              // painted, never laid out, so it can't shift the card as it loads
+              // (an unsized <img> here was a CLS culprit). The card's size comes
+              // from aspect-ratio below, independent of the image.
+              style={v.poster ? { backgroundImage: `url("${v.poster}")` } : undefined}
+            />
+          ))}
+        </div>
       <Swiper
         modules={[EffectCoverflow, Navigation, Pagination]}
         effect="coverflow"
@@ -87,7 +112,12 @@ export default function VideoCoverflow({ videos }: Props) {
         pagination={{ clickable: true }}
         coverflowEffect={{ rotate: 20, stretch: 0, depth: 150, modifier: 1, slideShadows: false }}
         onSlideChange={handleSlideChange}
-        onSwiper={(s) => setActiveIndex(s.realIndex)}
+        onSwiper={(s) => {
+          setActiveIndex(s.realIndex);
+          // Init is done and the coverflow transform is applied — reveal now,
+          // so the fade-in shows the already-centered layout (no visible jump).
+          setReady(true);
+        }}
       >
         {videos.map((v, i) => (
           <SwiperSlide key={v.id} className="coverflow__slide">
@@ -135,90 +165,7 @@ export default function VideoCoverflow({ videos }: Props) {
           </SwiperSlide>
         ))}
       </Swiper>
-
-      <style>{`
-        .coverflow {
-          width: 100%;
-          padding: 1rem 0 2.5rem;
-        }
-        .coverflow .swiper {
-          padding: 1rem 0 3rem;
-          overflow: hidden;
-        }
-        .coverflow__slide {
-          width: min(68vw, 360px);
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-        }
-        .coverflow__media {
-          position: relative;
-          width: 100%;
-          aspect-ratio: 9 / 16;
-          border-radius: 14px;
-          overflow: hidden;
-          background: #000;
-          border: 1px solid var(--border);
-          filter: brightness(0.5);
-          transition: filter 0.35s ease;
-        }
-        .coverflow__media.is-active {
-          filter: brightness(1);
-          box-shadow: 0 12px 40px rgba(0,0,0,0.55);
-        }
-        .coverflow__media video,
-        .coverflow__media iframe {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          background: #000;
-          border: 0;
-          display: block;
-        }
-        /* Dead-center tap control. Not full-cover, so dragging elsewhere on the
-           video still swipes; the swiper-no-swiping class lets the tap fire
-           through Swiper's touch handling (which otherwise swallows clicks). */
-        .coverflow__unmute {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 0.55rem;
-          padding: 1.1rem 1.6rem;
-          background: transparent;
-          color: #fff;
-          border: none;
-          cursor: pointer;
-          font-family: inherit;
-          font-size: 0.82rem;
-          font-weight: 700;
-          letter-spacing: 1px;
-          text-transform: uppercase;
-          text-shadow: 0 2px 10px rgba(0,0,0,0.75);
-        }
-        .coverflow__unmute svg {
-          filter: drop-shadow(0 2px 10px rgba(0,0,0,0.65));
-        }
-        .coverflow__unmute:hover svg { opacity: 0.85; }
-        .coverflow__title {
-          margin: 0.85rem 0 0;
-          color: var(--text);
-          font-weight: 700;
-        }
-        .coverflow .swiper-button-next,
-        .coverflow .swiper-button-prev {
-          color: var(--accent);
-        }
-        .coverflow .swiper-pagination-bullet {
-          background: var(--muted);
-        }
-        .coverflow .swiper-pagination-bullet-active {
-          background: var(--accent);
-        }
-      `}</style>
+      </div>
     </div>
   );
 }

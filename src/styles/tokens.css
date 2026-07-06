@@ -11,9 +11,12 @@
   --muted: #cbb27a; /* muted gold for secondary text */
   --border: #ddae2d; /* gold hairline borders (shows widget, etc.) */
 
-  /* Type — Martel Sans is the approved, signed-off brand face */
-  --font-sans: 'Martel Sans', system-ui, -apple-system, BlinkMacSystemFont,
-    'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  /* Type — Martel Sans is the approved, signed-off brand face.
+     'Martel Sans Fallback' is a build-generated, metric-adjusted system-font
+     face (via the fontaine Vite plugin, see astro.config.mjs / ADR 0005): it
+     matches Martel Sans's metrics so the swap-in causes no layout shift. */
+  --font-sans: 'Martel Sans', 'Martel Sans Fallback', system-ui, -apple-system,
+    BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 
   /* Layout */
   --maxw: 1100px;

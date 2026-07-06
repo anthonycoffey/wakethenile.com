@@ -12,6 +12,8 @@ that supersedes it.
 | [0001](./0001-edge-native-pages-functions.md) | Edge-native Cloudflare Pages Functions (no Astro adapter) | Accepted |
 | [0002](./0002-handrolled-stripe-store-no-shopify.md) | Hand-rolled Stripe + Sanity store (no Shopify) | Accepted |
 | [0003](./0003-static-ssg-content-only-cms.md) | Static SSG + content-only CMS (no page builder) | Accepted |
+| [0004](./0004-videos-coverflow-reserved-space-deferred-reveal.md) | Reserved space + deferred reveal for the videos coverflow | Accepted |
+| [0005](./0005-font-metric-fallback-and-shift-proof-skeleton.md) | Metric-adjusted font fallback + shift-proof video skeleton | Accepted |
 
 ## Adding an ADR
 
