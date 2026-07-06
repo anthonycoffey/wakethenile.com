@@ -90,9 +90,12 @@ export default function VideoCoverflow({ videos }: Props) {
             <div
               key={v.id}
               className={`coverflow__skeleton-card${i === 0 ? ' is-center' : ''}`}
-            >
-              {v.poster && <img src={v.poster} alt="" loading="eager" decoding="async" />}
-            </div>
+              // Poster as a background image, not an <img>: a background is
+              // painted, never laid out, so it can't shift the card as it loads
+              // (an unsized <img> here was a CLS culprit). The card's size comes
+              // from aspect-ratio below, independent of the image.
+              style={v.poster ? { backgroundImage: `url("${v.poster}")` } : undefined}
+            />
           ))}
         </div>
       <Swiper
@@ -223,14 +226,11 @@ export default function VideoCoverflow({ videos }: Props) {
           aspect-ratio: 9 / 16;
           border-radius: 14px;
           overflow: hidden;
-          background: #0a0a0a;
+          background-color: #0a0a0a;
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
           border: 1px solid var(--border);
-        }
-        .coverflow__skeleton-card img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          display: block;
         }
         .coverflow__skeleton-card.is-center {
           order: 2;
