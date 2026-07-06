@@ -28,6 +28,10 @@ swiping/arrows move between clips. Once unmuted, subsequent clips **auto-play wi
   [ADR 0004](../specs/adrs/0004-videos-coverflow-reserved-space-deferred-reveal.md).
   - The skeleton posters are painted as CSS **`background-image`**, never `<img>` — an unsized image
     here was itself a CLS culprit under real mobile load.
+  - The coverflow's critical CSS lives in **`VideoCoverflow.css` (imported → `<head>`)**, not a
+    runtime `<style>` in the island. If it's body-rendered it applies *after* first paint, so the
+    Swiper paints in-flow at full height then clamps to the reserved stage — a large shift. Keep it
+    in the head stylesheet.
   - The remaining (and larger) shift was the **Martel Sans web font** swapping in late and reflowing
     the carousel's text. That's fixed site-wide with a build-generated **metric-adjusted fallback
     font** (`fontaine`); see [ADR 0005](../specs/adrs/0005-font-metric-fallback-and-shift-proof-skeleton.md).
