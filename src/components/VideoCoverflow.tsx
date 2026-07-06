@@ -17,6 +17,11 @@ export default function VideoCoverflow({ videos }: Props) {
   const videoRefs = useRef<Array<HTMLVideoElement | null>>([]);
   const [muted, setMuted] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
+  // Gate the reveal on Swiper finishing init. Until then the carousel is a
+  // left-aligned, untransformed strip; showing it would flash and then jump to
+  // the centered coverflow layout (a Cumulative Layout Shift). We keep Swiper
+  // at opacity:0 over a poster skeleton and cross-fade once it's laid out.
+  const [ready, setReady] = useState(false);
   // Mirror `muted` in a ref so the (per-render) video ref callback applies the
   // CURRENT state instead of hard-resetting to muted — otherwise paginating to
   // a new slide re-mutes it right after we unmute.
@@ -75,7 +80,21 @@ export default function VideoCoverflow({ videos }: Props) {
   }
 
   return (
-    <div className="coverflow">
+    <div className={`coverflow${ready ? ' is-ready' : ''}`}>
+      {/* Reserved-height stage: occupies the carousel's final footprint from
+          first paint so hydration adds zero layout shift. The skeleton fills it
+          until Swiper reveals over the top. */}
+      <div className="coverflow__stage">
+        <div className="coverflow__skeleton" aria-hidden="true">
+          {videos.slice(0, 3).map((v, i) => (
+            <div
+              key={v.id}
+              className={`coverflow__skeleton-card${i === 0 ? ' is-center' : ''}`}
+            >
+              {v.poster && <img src={v.poster} alt="" loading="eager" decoding="async" />}
+            </div>
+          ))}
+        </div>
       <Swiper
         modules={[EffectCoverflow, Navigation, Pagination]}
         effect="coverflow"
@@ -87,7 +106,12 @@ export default function VideoCoverflow({ videos }: Props) {
         pagination={{ clickable: true }}
         coverflowEffect={{ rotate: 20, stretch: 0, depth: 150, modifier: 1, slideShadows: false }}
         onSlideChange={handleSlideChange}
-        onSwiper={(s) => setActiveIndex(s.realIndex)}
+        onSwiper={(s) => {
+          setActiveIndex(s.realIndex);
+          // Init is done and the coverflow transform is applied — reveal now,
+          // so the fade-in shows the already-centered layout (no visible jump).
+          setReady(true);
+        }}
       >
         {videos.map((v, i) => (
           <SwiperSlide key={v.id} className="coverflow__slide">
@@ -135,21 +159,99 @@ export default function VideoCoverflow({ videos }: Props) {
           </SwiperSlide>
         ))}
       </Swiper>
+      </div>
 
       <style>{`
         .coverflow {
           width: 100%;
           padding: 1rem 0 2.5rem;
+          /* Shared sizing so the skeleton and the real slides occupy an
+             identical footprint. --media-h drives the reserved stage height. */
+          --slide-w: min(68vw, 360px);
+          --media-h: calc(var(--slide-w) * 16 / 9);
+        }
+        /* Fixed-height stage: reserves the carousel's final footprint from the
+           first paint, so Swiper hydrating over the top shifts nothing in flow
+           (CLS = 0). Swiper and skeleton are both absolutely positioned inside. */
+        .coverflow__stage {
+          position: relative;
+          height: calc(var(--media-h) + 6.5rem);
         }
         .coverflow .swiper {
+          position: absolute;
+          inset: 0;
           padding: 1rem 0 3rem;
           overflow: hidden;
+          /* Hidden until Swiper reports init complete — hides the pre-init
+             left-aligned strip and the jump to the centered coverflow. */
+          opacity: 0;
+          transition: opacity 0.5s ease;
+        }
+        .coverflow.is-ready .swiper {
+          opacity: 1;
+        }
+        /* Vertically center the slide row within the (slightly taller) stage. */
+        .coverflow .swiper-wrapper {
+          align-items: center;
         }
         .coverflow__slide {
-          width: min(68vw, 360px);
+          width: var(--slide-w);
           display: flex;
           flex-direction: column;
           align-items: center;
+        }
+        /* Poster skeleton — a static mock of the coverflow (dimmed side cards
+           flanking a bright centre) that holds the space and reads as the media
+           already loading. Cross-fades out as Swiper fades in. */
+        .coverflow__skeleton {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding-bottom: 2rem;
+          opacity: 1;
+          transition: opacity 0.5s ease;
+        }
+        .coverflow.is-ready .coverflow__skeleton {
+          opacity: 0;
+          pointer-events: none;
+        }
+        .coverflow__skeleton-card {
+          flex: 0 0 auto;
+          width: var(--slide-w);
+          aspect-ratio: 9 / 16;
+          border-radius: 14px;
+          overflow: hidden;
+          background: #0a0a0a;
+          border: 1px solid var(--border);
+        }
+        .coverflow__skeleton-card img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+        }
+        .coverflow__skeleton-card.is-center {
+          order: 2;
+          z-index: 2;
+          box-shadow: 0 12px 40px rgba(0,0,0,0.55);
+        }
+        .coverflow__skeleton-card:not(.is-center) {
+          filter: brightness(0.5);
+          transform: scale(0.88);
+          margin-inline: calc(var(--slide-w) * -0.3);
+        }
+        .coverflow__skeleton-card:not(.is-center):first-child { order: 1; }
+        .coverflow__skeleton-card:not(.is-center):last-child { order: 3; }
+        @media (prefers-reduced-motion: no-preference) {
+          .coverflow:not(.is-ready) .coverflow__skeleton-card {
+            animation: coverflow-pulse 1.4s ease-in-out infinite;
+          }
+        }
+        @keyframes coverflow-pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.72; }
         }
         .coverflow__media {
           position: relative;
