@@ -24,9 +24,16 @@ swiping/arrows move between clips. Once unmuted, subsequent clips **auto-play wi
 - **Smooth loading (no layout shift):** the carousel lives inside a fixed-height **stage** that
   reserves its final footprint from the first paint, and Swiper is held at `opacity: 0` over a
   **poster skeleton** until its `onSwiper` init callback fires (`.coverflow.is-ready`), then
-  cross-fades in. This kills the pre-init "shuffle" (left-aligned strip → centered coverflow) that
-  otherwise registered as Cumulative Layout Shift and hurt Lighthouse. See
+  cross-fades in. This kills the pre-init "shuffle" (left-aligned strip → centered coverflow). See
   [ADR 0004](../specs/adrs/0004-videos-coverflow-reserved-space-deferred-reveal.md).
+  - The skeleton posters are painted as CSS **`background-image`**, never `<img>` — an unsized image
+    here was itself a CLS culprit under real mobile load.
+  - The remaining (and larger) shift was the **Martel Sans web font** swapping in late and reflowing
+    the carousel's text. That's fixed site-wide with a build-generated **metric-adjusted fallback
+    font** (`fontaine`); see [ADR 0005](../specs/adrs/0005-font-metric-fallback-and-shift-proof-skeleton.md).
+  - **Measuring CLS:** always under real mobile throttling — `lighthouse <url> --form-factor=mobile
+    --throttling-method=devtools` or PageSpeed Insights on the deployed page. An un-throttled local
+    load shows CLS 0 even when the real page shifts badly.
 
 ## Where videos are hosted (important)
 
