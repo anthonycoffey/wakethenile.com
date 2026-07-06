@@ -21,6 +21,12 @@ swiping/arrows move between clips. Once unmuted, subsequent clips **auto-play wi
   handling, while the rest of the video still swipes.
 - **Performance:** only the **active** clip preloads fully (`preload="auto"`); the others load
   `metadata` only — otherwise all clips download at once (~68 MB) and stall the browser.
+- **Smooth loading (no layout shift):** the carousel lives inside a fixed-height **stage** that
+  reserves its final footprint from the first paint, and Swiper is held at `opacity: 0` over a
+  **poster skeleton** until its `onSwiper` init callback fires (`.coverflow.is-ready`), then
+  cross-fades in. This kills the pre-init "shuffle" (left-aligned strip → centered coverflow) that
+  otherwise registered as Cumulative Layout Shift and hurt Lighthouse. See
+  [ADR 0004](../specs/adrs/0004-videos-coverflow-reserved-space-deferred-reveal.md).
 
 ## Where videos are hosted (important)
 
