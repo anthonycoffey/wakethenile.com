@@ -13,6 +13,14 @@
 // client libraries (@stripe/stripe-js) stay in lockstep.
 const STRIPE_VERSION = '2026-06-24.dahlia';
 
+// Products that unlock the "Pick up at Merch booth" shipping option — the
+// live-show ticket and superfan bundle sold from /superfans. Update this set
+// if those products are ever recreated with new IDs.
+const PICKUP_ELIGIBLE_PRODUCT_IDS = new Set([
+  '2480f00d-9317-4ed0-9406-bcef1e34bc71', // Live Show Ticket
+  'b351d11f-4c78-4a1f-b36b-c10d951c96ea', // Mega Superfan Bundle
+]);
+
 interface Env {
   STRIPE_SECRET_KEY?: string;
   SANITY_PROJECT_ID?: string;
@@ -173,6 +181,20 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
     if (taxEnabled) shipping_rate_data.tax_code = r.taxCode || defaultTaxCode;
     return { shipping_rate_data };
   });
+
+  // If the cart contains a live-show ticket or the superfan bundle, offer a
+  // free "pick up at the show" option below the standard shipping choices.
+  const hasPickupEligibleItem = items.some((i) => PICKUP_ELIGIBLE_PRODUCT_IDS.has(i.productId));
+  if (hasPickupEligibleItem) {
+    shipping_options.push({
+      shipping_rate_data: {
+        type: 'fixed_amount',
+        display_name: 'Pick up at Merch booth (show day)',
+        fixed_amount: { amount: 0, currency },
+        tax_behavior: 'exclusive',
+      },
+    });
+  }
 
   const origin = new URL(request.url).origin;
   const params: Record<string, unknown> = {
