@@ -1,0 +1,233 @@
+---
+// New page: wakethenile.com/superfans
+// Presale landing page for the first live show (Sep 19 @ Maggie May's).
+// Two options: the Mega Superfan Bundle (ticket + merch bundle + VIP) or a
+// standalone ticket. Clicking either adds the right product to the cart and
+// sends the customer to /merch, where a temporary banner explains pickup.
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { sanityFetch } from '../lib/sanity';
+import { urlForWidth } from '../lib/sanityImage';
+
+interface ProductImg {
+  slug: string;
+  images?: unknown[];
+}
+
+const query = `*[_type == "product" && slug.current in ["mega-superfan-bundle", "live-show-ticket"]]{
+  "slug": slug.current, images
+}`;
+const products = await sanityFetch<ProductImg[]>(query, {}, []);
+const bundle = products.find((p) => p.slug === 'mega-superfan-bundle');
+const ticket = products.find((p) => p.slug === 'live-show-ticket');
+
+const bundleImg = urlForWidth(bundle?.images?.[0], 900);
+const posterImg = urlForWidth(ticket?.images?.[0], 900);
+
+// Product IDs + cart line data. These match the products created in Sanity;
+// if you ever recreate these products, update the IDs here to match.
+const BUNDLE_PRODUCT_ID = 'b351d11f-4c78-4a1f-b36b-c10d951c96ea';
+const TICKET_PRODUCT_ID = '2480f00d-9317-4ed0-9406-bcef1e34bc71';
+---
+
+<BaseLayout
+  title="Superfan Presale"
+  description="Get tickets to our first live show — September 19th at Maggie May's."
+  footer="scroll"
+>
+  <section class="superfans">
+    <p class="superfans__eyebrow">Our First Live Show</p>
+    <h1 class="superfans__title">September 19 — Maggie May's</h1>
+    <p class="superfans__sub">Pick your option below. The first 100 tickets are $25 — price rises to $35 after that.</p>
+
+    <div class="superfans__cards">
+      <button type="button" class="superfans__card superfans__card--bundle" data-product="bundle">
+        <span class="superfans__imgstack">
+          {bundleImg && <img src={bundleImg} alt="Ultimate Fan Merch Bundle" class="superfans__img superfans__img--back" />}
+          {posterImg && <img src={posterImg} alt="Album Release Show Poster" class="superfans__img superfans__img--front" />}
+        </span>
+        <h2 class="superfans__name">Mega Superfan Bundle</h2>
+        <p class="superfans__price">$100</p>
+        <p class="superfans__desc">Show ticket + Ultimate Fan Merch Bundle + VIP area access</p>
+        <span class="superfans__cta">Add to Cart →</span>
+      </button>
+
+      <button type="button" class="superfans__card" data-product="ticket">
+        <span class="superfans__imgstack superfans__imgstack--single">
+          {posterImg && <img src={posterImg} alt="Album Release Show Poster" class="superfans__img" />}
+        </span>
+        <h2 class="superfans__name">Live Show Ticket</h2>
+        <p class="superfans__price">$25</p>
+        <p class="superfans__desc">General admission to the show</p>
+        <span class="superfans__cta">Add to Cart →</span>
+      </button>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import { addItem } from '../lib/cart';
+
+  const BUNDLE_PRODUCT_ID = 'b351d11f-4c78-4a1f-b36b-c10d951c96ea';
+  const TICKET_PRODUCT_ID = '2480f00d-9317-4ed0-9406-bcef1e34bc71';
+
+  document.querySelectorAll<HTMLButtonElement>('.superfans__card').forEach((card) => {
+    card.addEventListener('click', () => {
+      const img = card.querySelector('img')?.getAttribute('src') ?? undefined;
+      if (card.dataset.product === 'bundle') {
+        addItem({
+          productId: BUNDLE_PRODUCT_ID,
+          slug: 'mega-superfan-bundle',
+          title: 'Mega Superfan Bundle',
+          sku: 'mega-superfan-bundle',
+          unitPrice: 100,
+          qty: 1,
+          image: img,
+        });
+      } else {
+        addItem({
+          productId: TICKET_PRODUCT_ID,
+          slug: 'live-show-ticket',
+          title: 'Live Show Ticket',
+          sku: 'TICKET-EARLYBIRD',
+          variantLabel: 'Early Bird (First 100)',
+          unitPrice: 25,
+          qty: 1,
+          image: img,
+        });
+      }
+      sessionStorage.setItem('wtn_pickup_msg', '1');
+      window.location.href = '/merch';
+    });
+  });
+</script>
+
+<style>
+  .superfans {
+    max-width: 1100px;
+    margin-inline: auto;
+    padding: calc(8vh + 4.5rem) 1.5rem 2rem;
+    text-align: center;
+  }
+  .superfans__eyebrow {
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem;
+  }
+  .superfans__title {
+    color: var(--accent);
+    font-size: clamp(2.25rem, 2rem + 3vw, 3.75rem);
+    letter-spacing: -0.02em;
+    margin: 0 0 0.75rem;
+  }
+  .superfans__sub {
+    color: var(--muted);
+    max-width: 46ch;
+    margin: 0 auto 3.5rem;
+    font-size: 0.95rem;
+  }
+
+  /* Cards float below the main content and slightly overlap the footer. */
+  .superfans__cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: -70px;
+    position: relative;
+    z-index: 2;
+  }
+  @media (max-width: 720px) {
+    .superfans__cards {
+      grid-template-columns: 1fr;
+      margin-bottom: -40px;
+    }
+  }
+
+  .superfans__card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #0d0d0d;
+    border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+    border-radius: var(--radius);
+    padding: 2rem 1.5rem 2.25rem;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--accent);
+    transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+  .superfans__card:hover,
+  .superfans__card:focus-visible {
+    transform: translateY(-10px) scale(1.03);
+    border-color: var(--accent);
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.55);
+    outline: none;
+  }
+
+  .superfans__imgstack {
+    position: relative;
+    width: 100%;
+    max-width: 260px;
+    aspect-ratio: 4 / 5;
+    margin-bottom: 1.5rem;
+  }
+  .superfans__img {
+    position: absolute;
+    width: 78%;
+    height: 78%;
+    object-fit: cover;
+    border-radius: calc(var(--radius) - 2px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+  }
+  /* Bundle card: merch bundle behind, show poster overlapping in front. */
+  .superfans__img--back {
+    top: 0;
+    left: 0;
+  }
+  .superfans__img--front {
+    bottom: 0;
+    right: 0;
+    border: 3px solid var(--bg);
+  }
+  .superfans__imgstack--single .superfans__img {
+    position: static;
+    width: 100%;
+    height: 100%;
+  }
+
+  .superfans__name {
+    font-size: 1.15rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    margin: 0 0 0.4rem;
+  }
+  .superfans__price {
+    font-size: 1.75rem;
+    font-weight: 800;
+    margin: 0 0 0.6rem;
+  }
+  .superfans__desc {
+    color: var(--muted);
+    font-size: 0.85rem;
+    max-width: 30ch;
+    margin: 0 0 1.5rem;
+  }
+  .superfans__cta {
+    display: inline-block;
+    border: 2px solid var(--accent);
+    color: var(--accent);
+    border-radius: 100px;
+    text-transform: uppercase;
+    font-weight: 800;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    padding: 0.6em 1.4em;
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+  .superfans__card:hover .superfans__cta {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+</style>
