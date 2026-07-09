@@ -63,6 +63,40 @@ const items: NavItem[] =
   })();
 </script>
 
+<script is:inline>
+  // Dim/hide the nav links (Music/Videos/Connect/Shows) as soon as the page
+  // scrolls down at all; only bring them back once scrolled all the way back
+  // to the top. The logo and cart/burger stay put the whole time — only
+  // .site-header__nav is affected (and only on desktop; see CSS override).
+  (function () {
+    const header = document.querySelector('.site-header');
+    if (!header) return;
+    const TOP_THRESHOLD = 12; // px — must be back this close to 0 to reveal
+    let ticking = false;
+
+    function update() {
+      const y = window.scrollY;
+      if (y <= TOP_THRESHOLD) {
+        header.classList.remove('site-header--nav-hidden');
+      } else {
+        header.classList.add('site-header--nav-hidden');
+      }
+      ticking = false;
+    }
+
+    window.addEventListener(
+      'scroll',
+      function () {
+        if (!ticking) {
+          window.requestAnimationFrame(update);
+          ticking = true;
+        }
+      },
+      { passive: true },
+    );
+  })();
+</script>
+
 <style>
   .site-header {
     position: fixed;
@@ -92,6 +126,12 @@ const items: NavItem[] =
     justify-content: flex-end;
     align-items: center;
     gap: 1.4rem;
+    transition: opacity 0.35s ease;
+  }
+  /* Desktop only — dims the inline link bar, leaving logo/cart untouched. */
+  .site-header--nav-hidden .site-header__nav {
+    opacity: 0;
+    pointer-events: none;
   }
   .site-header__nav a {
     color: var(--accent);
@@ -175,6 +215,12 @@ const items: NavItem[] =
     }
     .site-header__nav a {
       font-size: clamp(2rem, 1.6rem + 3vw, 2.75rem);
+    }
+    /* Mobile menu ignores the scroll-hide state entirely — it's only ever
+       shown/hidden via the burger toggle (translateX above). */
+    .site-header--nav-hidden .site-header__nav {
+      opacity: 1;
+      pointer-events: auto;
     }
     /* Keep the cart + burger (as the X) tappable above the open menu */
     .site-header__actions {
