@@ -223,3 +223,68 @@ export default function CheckoutCustom({ publishableKey }: Props) {
     </CheckoutElementsProvider>
   );
 }
+/* ============================================================
+   Checkout â€” promo code box (CheckoutCustom.tsx)
+   Append this block to the end of src/styles/global.css
+   ============================================================ */
+.ccheckout__promo {
+  display: flex;
+  gap: 0.6rem;
+}
+.ccheckout__promo-input {
+  flex: 1;
+  min-width: 0;
+  background: #151515;
+  border: 1px solid rgba(221, 174, 45, 0.3);
+  border-radius: var(--radius);
+  color: #e8dcc0;
+  font-family: inherit;
+  font-size: 0.9rem;
+  padding: 0.7rem 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.ccheckout__promo-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.ccheckout__promo-input:disabled {
+  opacity: 0.6;
+}
+.ccheckout__promo-btn {
+  flex: 0 0 auto;
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  color: var(--accent);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.8rem;
+  padding: 0.7rem 1.1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.ccheckout__promo-btn:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.ccheckout__promo-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.ccheckout__promo-btn--remove {
+  border-color: rgba(221, 174, 45, 0.4);
+  color: var(--muted);
+}
+.ccheckout__promo-msg {
+  margin: 0.5rem 0 0;
+  font-size: 0.78rem;
+}
+.ccheckout__promo-msg--success {
+  color: var(--accent);
+}
+.ccheckout__promo-msg--error {
+  color: #ff6b6b;
+}
