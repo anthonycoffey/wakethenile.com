@@ -60,7 +60,7 @@ const IN_STOCK = `select(
 // Products tagged "hidden" are purchasable (checkout looks them up directly
 // by ID) but shouldn't appear in the general /merch grid — e.g. show tickets
 // sold only from a dedicated presale landing page.
-const NOT_HIDDEN = `!("hidden" in tags)`;
+const NOT_HIDDEN = `!("hidden" in coalesce(tags, []))`;
 
 // Grid card: enough to render a tile + a derived "from" price and stock state.
 export const allProductsQuery = `*[_type == "product" && ${NOT_DRAFT} && ${NOT_HIDDEN}] | order(title asc){
