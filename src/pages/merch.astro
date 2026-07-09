@@ -31,6 +31,10 @@ if (open) {
 <BaseLayout title={open ? 'Merch' : 'Shop'} description="Official Wake the Nile merch." footer="scroll">
   {open ? (
     <section class="merch">
+      <div id="pickup-toast" class="pickup-toast" hidden>
+        Added to cart — pick this up at our Merch booth on show day. Look for
+        "Pick up at Merch booth" as a shipping option at checkout.
+      </div>
       <h1 class="merch__title">Merch</h1>
       <ShopBrowser client:load products={items} />
     </section>
@@ -38,6 +42,20 @@ if (open) {
     <StoreClosed settings={settings} />
   )}
 </BaseLayout>
+
+<script>
+  const KEY = 'wtn_pickup_msg';
+  if (sessionStorage.getItem(KEY)) {
+    sessionStorage.removeItem(KEY);
+    const el = document.getElementById('pickup-toast');
+    if (el) {
+      el.hidden = false;
+      window.setTimeout(() => {
+        el.hidden = true;
+      }, 7000);
+    }
+  }
+</script>
 
 <style>
   .merch {
@@ -53,5 +71,18 @@ if (open) {
     letter-spacing: -0.02em;
     text-align: center;
     margin-bottom: 1.5rem;
+  }
+
+  .pickup-toast {
+    max-width: 640px;
+    margin: 0 auto 2rem;
+    background: color-mix(in srgb, var(--accent) 12%, #0d0d0d);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    color: var(--accent);
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 0.85rem 1.25rem;
+    animation: wtnFadeIn 0.3s ease;
   }
 </style>
