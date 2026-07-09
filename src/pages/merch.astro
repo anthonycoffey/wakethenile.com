@@ -36,6 +36,8 @@ if (open) {
       </div>
       <h1 class="merch__title">Merch</h1>
       <ShopBrowser client:load products={items} />
+
+      <a href="/checkout" class="merch__checkout-fab">Go to Checkout →</a>
     </section>
   ) : (
     <StoreClosed settings={settings} />
@@ -84,5 +86,39 @@ if (open) {
     text-align: center;
     padding: 0.85rem 1.25rem;
     animation: wtnFadeIn 0.3s ease;
+  }
+
+  /* Floating checkout shortcut — stays put while browsing/scrolling the grid. */
+  .merch__checkout-fab {
+    position: fixed;
+    right: 1.5rem;
+    bottom: 1.5rem;
+    z-index: 15;
+    display: inline-block;
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: 2px solid var(--accent);
+    border-radius: 100px;
+    text-transform: uppercase;
+    font-weight: 800;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    padding: 0.85em 1.6em;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    transition: background-color 0.25s ease, color 0.25s ease, transform 0.2s ease;
+  }
+  .merch__checkout-fab:hover {
+    background: transparent;
+    color: var(--accent);
+    text-decoration: none;
+    transform: translateY(-2px);
+  }
+  @media (max-width: 600px) {
+    .merch__checkout-fab {
+      right: 1rem;
+      bottom: 1rem;
+      padding: 0.7em 1.2em;
+      font-size: 0.75rem;
+    }
   }
 </style>
