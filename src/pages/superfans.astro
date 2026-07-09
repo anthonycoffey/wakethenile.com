@@ -1,9 +1,11 @@
 ---
 // New page: wakethenile.com/superfans
-// Presale landing page for the first live show (Sep 19 @ Maggie May's).
+// Presale landing page for the first live show (Sep 19 @ Maggie Mae's Upstairs).
 // Two options: the Mega Superfan Bundle (ticket + merch bundle + VIP) or a
-// standalone ticket. Clicking either adds the right product to the cart and
-// sends the customer to /merch, where a temporary banner explains pickup.
+// standalone ticket.
+//  - Bundle: adds to cart and goes straight to /checkout (no merch browsing).
+//  - Ticket only: adds to cart and goes to /merch, with a temporary banner
+//    inviting them to grab anything else before checking out.
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { sanityFetch } from '../lib/sanity';
 import { urlForWidth } from '../lib/sanityImage';
@@ -31,19 +33,20 @@ const TICKET_PRODUCT_ID = '2480f00d-9317-4ed0-9406-bcef1e34bc71';
 
 <BaseLayout
   title="Superfan Presale"
-  description="Get tickets to our first live show — September 19th at Maggie May's."
+  description="Get tickets to our first live show — September 19th at Maggie Mae's Upstairs."
   footer="scroll"
 >
   <section class="superfans">
     <p class="superfans__eyebrow">Our First Live Show</p>
-    <h1 class="superfans__title">September 19 — Maggie May's</h1>
+    <h1 class="superfans__title">September 19 — Maggie Mae's Upstairs</h1>
     <p class="superfans__sub">Pick your option below. The first 100 tickets are $25 — price rises to $35 after that.</p>
+    <p class="superfans__note">Any merch you get with either option can be picked up at our Merch booth on show night — no shipping wait.</p>
 
     <div class="superfans__cards">
       <button type="button" class="superfans__card superfans__card--bundle" data-product="bundle">
         <span class="superfans__imgstack">
-          {bundleImg && <img src={bundleImg} alt="Ultimate Fan Merch Bundle" class="superfans__img superfans__img--back" />}
-          {posterImg && <img src={posterImg} alt="Album Release Show Poster" class="superfans__img superfans__img--front" />}
+          {posterImg && <img src={posterImg} alt="Album Release Show Poster" class="superfans__img superfans__img--back" />}
+          {bundleImg && <img src={bundleImg} alt="Ultimate Fan Merch Bundle" class="superfans__img superfans__img--front" />}
         </span>
         <h2 class="superfans__name">Mega Superfan Bundle</h2>
         <p class="superfans__price">$100</p>
@@ -72,7 +75,9 @@ const TICKET_PRODUCT_ID = '2480f00d-9317-4ed0-9406-bcef1e34bc71';
 
   document.querySelectorAll<HTMLButtonElement>('.superfans__card').forEach((card) => {
     card.addEventListener('click', () => {
-      const img = card.querySelector('img')?.getAttribute('src') ?? undefined;
+      const imgs = card.querySelectorAll('img');
+      const img = imgs[imgs.length - 1]?.getAttribute('src') ?? undefined;
+
       if (card.dataset.product === 'bundle') {
         addItem({
           productId: BUNDLE_PRODUCT_ID,
@@ -83,6 +88,8 @@ const TICKET_PRODUCT_ID = '2480f00d-9317-4ed0-9406-bcef1e34bc71';
           qty: 1,
           image: img,
         });
+        // Bundle buyers skip merch browsing entirely — straight to checkout.
+        window.location.href = '/checkout';
       } else {
         addItem({
           productId: TICKET_PRODUCT_ID,
@@ -94,9 +101,10 @@ const TICKET_PRODUCT_ID = '2480f00d-9317-4ed0-9406-bcef1e34bc71';
           qty: 1,
           image: img,
         });
+        // Ticket-only buyers land on the real merch store with a nudge.
+        sessionStorage.setItem('wtn_upsell_msg', '1');
+        window.location.href = '/merch';
       }
-      sessionStorage.setItem('wtn_pickup_msg', '1');
-      window.location.href = '/merch';
     });
   });
 </script>
@@ -125,8 +133,15 @@ const TICKET_PRODUCT_ID = '2480f00d-9317-4ed0-9406-bcef1e34bc71';
   .superfans__sub {
     color: var(--muted);
     max-width: 46ch;
-    margin: 0 auto 3.5rem;
+    margin: 0 auto 0.75rem;
     font-size: 0.95rem;
+  }
+  .superfans__note {
+    color: var(--accent);
+    opacity: 0.85;
+    max-width: 46ch;
+    margin: 0 auto 3.5rem;
+    font-size: 0.82rem;
   }
 
   /* Cards float below the main content and slightly overlap the footer. */
@@ -169,19 +184,21 @@ const TICKET_PRODUCT_ID = '2480f00d-9317-4ed0-9406-bcef1e34bc71';
   .superfans__imgstack {
     position: relative;
     width: 100%;
-    max-width: 260px;
+    max-width: 320px;
     aspect-ratio: 4 / 5;
     margin-bottom: 1.5rem;
   }
   .superfans__img {
     position: absolute;
-    width: 78%;
-    height: 78%;
+    width: 60%;
+    height: 60%;
     object-fit: cover;
     border-radius: calc(var(--radius) - 2px);
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
   }
-  /* Bundle card: merch bundle behind, show poster overlapping in front. */
+  /* Bundle card: show poster behind (top-left), merch bundle in front
+     (bottom-right) — sized down with more room between them so they read as
+     two distinct items rather than a single stacked image. */
   .superfans__img--back {
     top: 0;
     left: 0;
