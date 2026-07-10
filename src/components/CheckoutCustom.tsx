@@ -104,6 +104,11 @@ function CheckoutForm() {
     setPromoIsError(false);
     try {
       const res = await checkout.applyPromotionCode(code);
+      // TEMP diagnostic logging — remove once the "invalid code" issue is
+      // root-caused. Prints Stripe's full error payload (code/type/etc.),
+      // not just the message, so we can see exactly why it's rejected.
+      // eslint-disable-next-line no-console
+      console.log('[promo debug] full response:', JSON.stringify(res, null, 2));
       if (res?.type === 'error') {
         setPromoIsError(true);
         setPromoMsg(res.error?.message ?? 'That code isn’t valid.');
