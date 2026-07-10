@@ -66,6 +66,10 @@ function CheckoutForm() {
   const [promoApplied, setPromoApplied] = useState(false);
   const [promoMsg, setPromoMsg] = useState<string | null>(null);
   const [promoIsError, setPromoIsError] = useState(false);
+  // Stripe has a known live-mode quirk: applyPromotionCode() can wrongly
+  // report "invalid" if the Payment Element hasn't finished loading yet.
+  // Gate the Apply button on its onReady callback so that can't happen.
+  const [paymentReady, setPaymentReady] = useState(false);
 
   const checkout = state?.type === 'success' ? state.checkout : null;
 
@@ -94,7 +98,7 @@ function CheckoutForm() {
 
   const applyPromo = async () => {
     const code = promoCode.trim();
-    if (!code || promoBusy) return;
+    if (!code || promoBusy || !paymentReady) return;
     setPromoBusy(true);
     setPromoMsg(null);
     setPromoIsError(false);
@@ -205,9 +209,9 @@ function CheckoutForm() {
               type="button"
               className="ccheckout__promo-btn"
               onClick={applyPromo}
-              disabled={promoBusy || submitting || !promoCode.trim()}
+              disabled={promoBusy || submitting || !promoCode.trim() || !paymentReady}
             >
-              {promoBusy ? 'Applying…' : 'Apply'}
+              {!paymentReady ? 'Loading…' : promoBusy ? 'Applying…' : 'Apply'}
             </button>
           ) : (
             <button
@@ -233,7 +237,7 @@ function CheckoutForm() {
 
       <section className="ccheckout__section">
         <h3 className="ccheckout__h">Payment</h3>
-        <PaymentElement />
+        <PaymentElement onReady={() => setPaymentReady(true)} />
       </section>
 
       {total && (
