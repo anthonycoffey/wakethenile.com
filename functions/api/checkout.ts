@@ -18,7 +18,7 @@ const STRIPE_VERSION = '2026-06-24.dahlia';
 // if those products are ever recreated with new IDs.
 const PICKUP_ELIGIBLE_PRODUCT_IDS = new Set([
   '2480f00d-9317-4ed0-9406-bcef1e34bc71', // Live Show Ticket
-  'b351d11f-4c78-4a1f-b36b-c10d951c96ea', // Mega Superfan Bundle
+  'b351d11f-4c78-4a1f-b36b-c10d951c96ea', // Ultimate Fan Experience (superfan bundle)
 ]);
 
 // Required tee/size selections for the bundle products. MIRRORS

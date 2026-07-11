@@ -49,5 +49,7 @@ Allowed values are defined once in `src/lib/bundleOptions.ts` (frontend) and mir
 ## Out of scope
 
 - Bundle sales do not decrement standalone Obuntu/Champion tee stock.
-- Pre-existing `/superfans` copy mismatch ("Mega Superfan Bundle" vs CMS "Ultimate Fan Experience") and the
-  duplicate tee SKUs in Sanity are not addressed here.
+- The duplicate tee SKUs in Sanity (both tees use `TEE-CHMP-*`) are not addressed here.
+
+> Note: the `/superfans` bundle is now labeled **Ultimate Fan Experience** (title/slug/sku aligned to the CMS
+> product), resolving the earlier copy mismatch.

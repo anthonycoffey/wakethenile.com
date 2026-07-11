@@ -1,7 +1,7 @@
 ---
 // New page: wakethenile.com/superfans
 // Presale landing page for the first live show (Sep 19 @ Maggie Mae's Upstairs).
-// Two options: the Mega Superfan Bundle (ticket + merch bundle + VIP) or a
+// Two options: the Ultimate Fan Experience (ticket + merch bundle + VIP) or a
 // standalone ticket.
 //  - Bundle: adds to cart and goes straight to /checkout (no merch browsing).
 //  - Ticket only: adds to cart and goes to /merch, with a temporary banner
@@ -59,7 +59,7 @@ const bundleOptionGroups = bundleOptionGroupsFor(BUNDLE_PRODUCT_ID) ?? [];
           {posterImg && <img src={posterImg} alt="Album Release Show Poster" class="superfans__img superfans__img--back" />}
           {bundleImg && <img src={bundleImg} alt="Ultimate Fan Merch Bundle" class="superfans__img superfans__img--front" />}
         </span>
-        <h2 class="superfans__name">Mega Superfan Bundle</h2>
+        <h2 class="superfans__name">Ultimate Fan Experience</h2>
         <p class="superfans__price">$100</p>
         <p class="superfans__desc">Show ticket + Ultimate Fan Merch Bundle + VIP area access</p>
 
@@ -158,9 +158,9 @@ const bundleOptionGroups = bundleOptionGroupsFor(BUNDLE_PRODUCT_ID) ?? [];
       const options = groups.map((g) => ({ name: groupName(g), value: choices[groupName(g)] }));
       addItem({
         productId: BUNDLE_PRODUCT_ID,
-        slug: 'mega-superfan-bundle',
-        title: 'Mega Superfan Bundle',
-        sku: 'mega-superfan-bundle',
+        slug: 'superfans',
+        title: 'Ultimate Fan Experience',
+        sku: 'superfans',
         unitPrice: 100,
         qty: 1,
         image: cardImage(bundleCard),
