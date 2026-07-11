@@ -14,6 +14,7 @@ that supersedes it.
 | [0003](./0003-static-ssg-content-only-cms.md) | Static SSG + content-only CMS (no page builder) | Accepted |
 | [0004](./0004-videos-coverflow-reserved-space-deferred-reveal.md) | Reserved space + deferred reveal for the videos coverflow | Accepted |
 | [0005](./0005-font-metric-fallback-and-shift-proof-skeleton.md) | Metric-adjusted font fallback + shift-proof video skeleton | Accepted |
+| [0006](./0006-live-show-ticket-presale-on-stripe-store.md) | Live-show ticket presale on the hand-rolled Stripe store | Accepted |
 
 ## Adding an ADR
 
