@@ -90,23 +90,33 @@ function CheckoutForm() {
   // Stripe's applyPromotionCode() can spuriously return "invalid" for a valid
   // code if it's called the instant the Payment Element reports ready (a known
   // timing quirk — same reason the manual Apply button is gated on
-  // `paymentReady`). A single immediate attempt therefore fails silently and a
-  // human clicking "Apply" a few seconds later succeeds. So we retry with
-  // backoff across a few seconds before giving up; on exhaustion the flag is
-  // left in place so a reload or manual entry can still apply it.
+  // `paymentReady`). So we retry with backoff across a few seconds.
+  //
+  // Critical: this effect depends ONLY on `paymentReady`, and reads the live
+  // `checkout` from a ref. `useCheckout()` hands back a new `checkout` object
+  // reference on every state change (e.g. the shipping-option auto-select above
+  // fires right at load), so depending on `checkout` here would tear down and
+  // re-run this effect mid-flight — cancelling the retry loop before any
+  // attempt lands, which is exactly what broke the first version of this fix.
   const autoPromoStarted = useRef(false);
+  const checkoutRef = useRef(checkout);
+  checkoutRef.current = checkout;
+  const promoAppliedRef = useRef(promoApplied);
+  promoAppliedRef.current = promoApplied;
   useEffect(() => {
-    if (!checkout || !paymentReady || promoApplied || autoPromoStarted.current) return;
+    if (!paymentReady || autoPromoStarted.current) return;
     const code = typeof window !== 'undefined' ? sessionStorage.getItem('wtn_promo') : null;
     if (!code) return;
     autoPromoStarted.current = true;
     let cancelled = false;
     (async () => {
-      for (let attempt = 0; attempt < 5 && !cancelled; attempt++) {
-        await new Promise((r) => setTimeout(r, attempt === 0 ? 600 : 900));
-        if (cancelled) return;
+      for (let attempt = 0; attempt < 6 && !cancelled; attempt++) {
+        await new Promise((r) => setTimeout(r, attempt === 0 ? 800 : 1000));
+        if (cancelled || promoAppliedRef.current) return;
+        const co = checkoutRef.current;
+        if (!co) continue;
         try {
-          const res = await checkout.applyPromotionCode(code);
+          const res = await co.applyPromotionCode(code);
           if (res?.type !== 'error') {
             setPromoApplied(true);
             setPromoCode(code);
@@ -120,10 +130,12 @@ function CheckoutForm() {
         }
       }
     })();
+    // Only cancels on unmount now (paymentReady never flips back to false),
+    // so ordinary re-renders can't kill the retry loop.
     return () => {
       cancelled = true;
     };
-  }, [checkout, paymentReady, promoApplied]);
+  }, [paymentReady]);
 
   if (state?.type === 'loading') return <p className="checkout__msg">Loading secure checkout…</p>;
   if (state?.type === 'error')
