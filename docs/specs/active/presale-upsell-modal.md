@@ -25,12 +25,20 @@ at the show) and a real, time-limited **15% off** incentive that applies without
 
 ## Discount
 
-`WTN15OFF` → Stripe coupon `DFFqDqbe`, **15% off**, live, no expiry, capped at 30 redemptions. Applies to the whole
-checkout session (Stripe percent-off coupon).
+`WTN15OFF` → Stripe coupon `DFFqDqbe`, **15% off**, live, capped at 30 redemptions. Applies to the whole checkout
+session (Stripe percent-off coupon).
+
+## Countdown
+
+The modal shows a live countdown to a fixed deadline: **Fri 2026-07-17 23:59 America/Chicago**
+(`2026-07-17T23:59:00-05:00`), set via the `data-deadline` attribute on `.upsell-modal__countdown` in
+`src/pages/merch.astro`. It's a fixed instant, so every visitor sees the same remaining time. At zero it reads
+"This offer has ended".
 
 ## Notes / trade-offs
 
 - The offer is armed on arrival, so it also applies if the customer skips browsing and checks out with just the
   ticket (15% off the ticket). Acceptable as goodwill; revisit if it should be gated to "Look around" only.
-- "Limited time" is copy (urgency); enforced practically by the 30-redemption cap and session scope, not a live
-  countdown.
+- **The countdown is display-only.** To make expiry truthful, the Stripe promo code `WTN15OFF` should also get an
+  `expires_at` matching the deadline (currently no expiry) — otherwise the code still works after the timer hits
+  zero. Pending owner approval to set it.
