@@ -23,8 +23,10 @@ at the show) and a real, time-limited **15% off** incentive that applies without
    `applyPromotionCode()` automatically, shows it as applied, and clears the flag. The code lives only in
    `/superfans`; checkout applies whatever was armed. Because Stripe's `applyPromotionCode()` can spuriously
    return "invalid" if called the instant the Payment Element reports ready, the auto-apply **retries with
-   backoff** (5 attempts over ~4s) before giving up; on exhaustion the flag is left so a reload or manual entry
-   still works.
+   backoff** (6 attempts over ~6s) before giving up; on exhaustion the flag is left so a reload or manual entry
+   still works. The retry effect depends **only** on `paymentReady` and reads the live `checkout` from a ref —
+   depending on `checkout` (whose reference changes on every state update, e.g. shipping auto-select) tore the
+   loop down mid-flight and was the reason an earlier version of the fix silently did nothing.
 
 ## Discount
 
