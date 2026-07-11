@@ -9,6 +9,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { sanityFetch } from '../lib/sanity';
 import { urlForWidth } from '../lib/sanityImage';
+import { bundleOptionGroupsFor } from '../lib/bundleOptions';
 
 interface ProductImg {
   id: string;
@@ -35,6 +36,10 @@ const ticket = products.find((p) => p.id === TICKET_PRODUCT_ID);
 
 const bundleImg = urlForWidth(bundle?.images?.[0], 900);
 const posterImg = urlForWidth(ticket?.images?.[0], 900);
+
+// Tee/size the customer must pick with the bundle (shared with /merch + the
+// checkout validator). See ADR 0007 / src/lib/bundleOptions.ts.
+const bundleOptionGroups = bundleOptionGroupsFor(BUNDLE_PRODUCT_ID) ?? [];
 ---
 
 <BaseLayout
@@ -49,7 +54,7 @@ const posterImg = urlForWidth(ticket?.images?.[0], 900);
     <p class="superfans__note">Any merch you get with either option can be picked up at our Merch booth on show night — no shipping wait.</p>
 
     <div class="superfans__cards">
-      <button type="button" class="superfans__card superfans__card--bundle" data-product="bundle">
+      <div class="superfans__card superfans__card--bundle">
         <span class="superfans__imgstack">
           {posterImg && <img src={posterImg} alt="Album Release Show Poster" class="superfans__img superfans__img--back" />}
           {bundleImg && <img src={bundleImg} alt="Ultimate Fan Merch Bundle" class="superfans__img superfans__img--front" />}
@@ -57,8 +62,26 @@ const posterImg = urlForWidth(ticket?.images?.[0], 900);
         <h2 class="superfans__name">Mega Superfan Bundle</h2>
         <p class="superfans__price">$100</p>
         <p class="superfans__desc">Show ticket + Ultimate Fan Merch Bundle + VIP area access</p>
-        <span class="superfans__cta">Add to Cart →</span>
-      </button>
+
+        <div class="superfans__options">
+          {bundleOptionGroups.map((group) => (
+            <div class="superfans__optgroup" data-group={group.name}>
+              <span class="superfans__optlabel">{group.name}</span>
+              <div class="superfans__opts">
+                {group.values.map((value) => (
+                  <button type="button" class="superfans__opt" data-value={value} aria-pressed="false">
+                    {value}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button type="button" class="superfans__cta superfans__cta--btn" data-bundle-add disabled>
+          Select tee &amp; size
+        </button>
+      </div>
 
       <button type="button" class="superfans__card" data-product="ticket">
         <span class="superfans__imgstack superfans__imgstack--single">
@@ -79,40 +102,74 @@ const posterImg = urlForWidth(ticket?.images?.[0], 900);
   const BUNDLE_PRODUCT_ID = 'b351d11f-4c78-4a1f-b36b-c10d951c96ea';
   const TICKET_PRODUCT_ID = '2480f00d-9317-4ed0-9406-bcef1e34bc71';
 
-  document.querySelectorAll<HTMLButtonElement>('.superfans__card').forEach((card) => {
-    card.addEventListener('click', () => {
-      const imgs = card.querySelectorAll('img');
-      const img = imgs[imgs.length - 1]?.getAttribute('src') ?? undefined;
+  const cardImage = (root: Element): string | undefined => {
+    const imgs = root.querySelectorAll('img');
+    return imgs[imgs.length - 1]?.getAttribute('src') ?? undefined;
+  };
 
-      if (card.dataset.product === 'bundle') {
-        addItem({
-          productId: BUNDLE_PRODUCT_ID,
-          slug: 'mega-superfan-bundle',
-          title: 'Mega Superfan Bundle',
-          sku: 'mega-superfan-bundle',
-          unitPrice: 100,
-          qty: 1,
-          image: img,
-        });
-        // Bundle buyers skip merch browsing entirely — straight to checkout.
-        window.location.href = '/checkout';
-      } else {
-        addItem({
-          productId: TICKET_PRODUCT_ID,
-          slug: 'live-show-ticket',
-          title: 'Live Show Ticket',
-          sku: 'TICKET-EARLYBIRD',
-          variantLabel: 'Early Bird (First 100)',
-          unitPrice: 25,
-          qty: 1,
-          image: img,
-        });
-        // Ticket-only buyers land on the real merch store with a nudge.
-        sessionStorage.setItem('wtn_upsell_msg', '1');
-        window.location.href = '/merch';
-      }
+  // Ticket card — a plain whole-card button: click adds and nudges to merch.
+  const ticketCard = document.querySelector<HTMLButtonElement>('[data-product="ticket"]');
+  ticketCard?.addEventListener('click', () => {
+    addItem({
+      productId: TICKET_PRODUCT_ID,
+      slug: 'live-show-ticket',
+      title: 'Live Show Ticket',
+      sku: 'TICKET-EARLYBIRD',
+      variantLabel: 'Early Bird (First 100)',
+      unitPrice: 25,
+      qty: 1,
+      image: cardImage(ticketCard),
     });
+    sessionStorage.setItem('wtn_upsell_msg', '1');
+    window.location.href = '/merch';
   });
+
+  // Bundle card — the tee + size must be chosen before the CTA unlocks.
+  const bundleCard = document.querySelector<HTMLElement>('.superfans__card--bundle');
+  if (bundleCard) {
+    const addBtn = bundleCard.querySelector<HTMLButtonElement>('[data-bundle-add]');
+    const groups = [...bundleCard.querySelectorAll<HTMLElement>('.superfans__optgroup')];
+    const choices: Record<string, string> = {};
+
+    const groupName = (g: HTMLElement) => g.dataset.group ?? '';
+    const allChosen = () => groups.every((g) => choices[groupName(g)]);
+
+    const refresh = () => {
+      if (!addBtn) return;
+      const ready = allChosen();
+      addBtn.disabled = !ready;
+      addBtn.textContent = ready ? 'Add to Cart →' : 'Select tee & size';
+    };
+
+    for (const g of groups) {
+      const name = groupName(g);
+      const opts = [...g.querySelectorAll<HTMLButtonElement>('.superfans__opt')];
+      for (const btn of opts) {
+        btn.addEventListener('click', () => {
+          choices[name] = btn.dataset.value ?? '';
+          for (const b of opts) b.setAttribute('aria-pressed', String(b === btn));
+          refresh();
+        });
+      }
+    }
+
+    addBtn?.addEventListener('click', () => {
+      if (!allChosen()) return;
+      const options = groups.map((g) => ({ name: groupName(g), value: choices[groupName(g)] }));
+      addItem({
+        productId: BUNDLE_PRODUCT_ID,
+        slug: 'mega-superfan-bundle',
+        title: 'Mega Superfan Bundle',
+        sku: 'mega-superfan-bundle',
+        unitPrice: 100,
+        qty: 1,
+        image: cardImage(bundleCard),
+        options,
+      });
+      // Bundle buyers skip merch browsing entirely — straight to checkout.
+      window.location.href = '/checkout';
+    });
+  }
 </script>
 
 <style>
@@ -249,8 +306,75 @@ const posterImg = urlForWidth(ticket?.images?.[0], 900);
     padding: 0.6em 1.4em;
     transition: background-color 0.25s ease, color 0.25s ease;
   }
-  .superfans__card:hover .superfans__cta {
+  /* Only the plain (ticket) card fills its CTA on hover. The bundle CTA is a
+     real button with its own hover/disabled states below. */
+  .superfans__card:not(.superfans__card--bundle):hover .superfans__cta {
     background: var(--accent);
     color: var(--accent-ink);
+  }
+
+  /* The bundle card is a container (not a single click target) — its own
+     controls handle clicks, so don't imply the whole card is clickable. */
+  .superfans__card--bundle {
+    cursor: default;
+  }
+
+  /* Bundle tee/size selectors. */
+  .superfans__options {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    text-align: left;
+  }
+  .superfans__optlabel {
+    display: block;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+  .superfans__opts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .superfans__opt {
+    min-width: 2.8rem;
+    padding: 0.5rem 0.85rem;
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  }
+  .superfans__opt:hover {
+    border-color: var(--accent);
+  }
+  .superfans__opt[aria-pressed='true'] {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: var(--accent);
+  }
+
+  /* CTA rendered as a <button> on the bundle card. */
+  .superfans__cta--btn {
+    background: transparent;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .superfans__cta--btn:not(:disabled):hover {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  .superfans__cta--btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 </style>

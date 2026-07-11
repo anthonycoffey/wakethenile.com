@@ -12,6 +12,20 @@ function hasWindow(): boolean {
   return typeof window !== 'undefined';
 }
 
+/**
+ * Stable identity for a cart line. Usually just the SKU, but lines carrying
+ * customer-selected options (bundle tee/size) also fold those in, so the same
+ * SKU with a different tee/size is a distinct line rather than colliding.
+ */
+export function lineKey(item: Pick<CartItem, 'sku' | 'options'>): string {
+  if (!item.options?.length) return item.sku;
+  const opts = item.options
+    .map((o) => `${o.name}=${o.value}`)
+    .sort()
+    .join('&');
+  return `${item.sku}|${opts}`;
+}
+
 export function getCart(): CartItem[] {
   if (!hasWindow()) return [];
   try {
@@ -29,10 +43,11 @@ function save(items: CartItem[]): void {
   window.dispatchEvent(new CustomEvent(EVENT, { detail: items }));
 }
 
-/** Add (or increment) a line, keyed by SKU. */
+/** Add (or increment) a line, keyed by SKU + selected options (see `lineKey`). */
 export function addItem(item: CartItem): void {
   const items = getCart();
-  const existing = items.find((i) => i.sku === item.sku);
+  const key = lineKey(item);
+  const existing = items.find((i) => lineKey(i) === key);
   if (existing) {
     existing.qty += item.qty;
   } else {
@@ -41,20 +56,22 @@ export function addItem(item: CartItem): void {
   save(items);
 }
 
-export function updateQty(sku: string, qty: number): void {
+/** Update quantity for the line with this `lineKey` (0 removes it). */
+export function updateQty(key: string, qty: number): void {
   const items = getCart();
-  const line = items.find((i) => i.sku === sku);
+  const line = items.find((i) => lineKey(i) === key);
   if (!line) return;
   if (qty <= 0) {
-    save(items.filter((i) => i.sku !== sku));
+    save(items.filter((i) => lineKey(i) !== key));
   } else {
     line.qty = qty;
     save(items);
   }
 }
 
-export function removeItem(sku: string): void {
-  save(getCart().filter((i) => i.sku !== sku));
+/** Remove the line with this `lineKey`. */
+export function removeItem(key: string): void {
+  save(getCart().filter((i) => lineKey(i) !== key));
 }
 
 export function clearCart(): void {

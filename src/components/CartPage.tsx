@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { getCart, onCartChange, updateQty, removeItem, cartSubtotal } from '../lib/cart';
+import { getCart, onCartChange, updateQty, removeItem, cartSubtotal, lineKey } from '../lib/cart';
+import { formatOptions } from '../lib/bundleOptions';
 import { formatPrice } from '../lib/format';
 import type { CartItem } from '../lib/types';
 
@@ -31,31 +32,36 @@ export default function CartPage() {
   return (
     <div className="cartpage">
       <ul className="cartpage__items">
-        {items.map((it) => (
-          <li key={it.sku} className="cartrow">
+        {items.map((it) => {
+          const key = lineKey(it);
+          const opts = formatOptions(it.options);
+          return (
+          <li key={key} className="cartrow">
             <div className="cartrow__media">
               {it.image ? <img src={it.image} alt="" /> : <span className="cartrow__ph" aria-hidden="true" />}
             </div>
             <div className="cartrow__info">
               <span className="cartrow__title">{it.title}</span>
               {it.variantLabel && <span className="cartrow__variant">{it.variantLabel}</span>}
+              {opts && <span className="cartrow__variant">{opts}</span>}
               <span className="cartrow__unit">{formatPrice(it.unitPrice)} each</span>
-              <button className="cartrow__remove" onClick={() => removeItem(it.sku)}>
+              <button className="cartrow__remove" onClick={() => removeItem(key)}>
                 Remove
               </button>
             </div>
             <div className="cartrow__qty">
-              <button aria-label="Decrease" onClick={() => updateQty(it.sku, it.qty - 1)}>
+              <button aria-label="Decrease" onClick={() => updateQty(key, it.qty - 1)}>
                 −
               </button>
               <span>{it.qty}</span>
-              <button aria-label="Increase" onClick={() => updateQty(it.sku, it.qty + 1)}>
+              <button aria-label="Increase" onClick={() => updateQty(key, it.qty + 1)}>
                 +
               </button>
             </div>
             <div className="cartrow__total">{formatPrice(it.unitPrice * it.qty)}</div>
           </li>
-        ))}
+          );
+        })}
       </ul>
 
       <aside className="cartpage__summary">

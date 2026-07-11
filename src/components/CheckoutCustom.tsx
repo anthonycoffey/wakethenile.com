@@ -276,7 +276,12 @@ export default function CheckoutCustom({ publishableKey }: Props) {
       setErr('Checkout isn’t configured yet — the Stripe publishable key is missing.');
       return;
     }
-    const items = getCart().map((i) => ({ productId: i.productId, sku: i.sku, qty: i.qty }));
+    const items = getCart().map((i) => ({
+      productId: i.productId,
+      sku: i.sku,
+      qty: i.qty,
+      options: i.options,
+    }));
     if (items.length === 0) {
       setUi('empty');
       return;
