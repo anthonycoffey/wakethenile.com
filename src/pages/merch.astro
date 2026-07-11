@@ -31,8 +31,25 @@ if (open) {
 <BaseLayout title={open ? 'Merch' : 'Shop'} description="Official Wake the Nile merch." footer="scroll">
   {open ? (
     <section class="merch">
-      <div id="upsell-toast" class="upsell-toast" hidden>
-        Ticket added to your cart — want to grab anything else before you check out?
+      <div id="upsell-modal" class="upsell-modal" hidden aria-hidden="true">
+        <div class="upsell-modal__backdrop" data-upsell-close></div>
+        <div class="upsell-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="upsell-title">
+          <span class="upsell-modal__badge">15% off · limited time</span>
+          <h2 id="upsell-title" class="upsell-modal__title">Your ticket’s in the cart 🎟️</h2>
+          <p class="upsell-modal__body">
+            Before you check out, take a look around our store — anything you buy can be
+            <strong>picked up at the show</strong>, no shipping wait. And for a very short time,
+            your order gets <strong>15% off, applied automatically at checkout.</strong>
+          </p>
+          <div class="upsell-modal__actions">
+            <button type="button" class="upsell-modal__btn upsell-modal__btn--primary" data-upsell-close>
+              Look around the store
+            </button>
+            <button type="button" class="upsell-modal__btn upsell-modal__btn--ghost" id="upsell-checkout">
+              No thanks — go to checkout
+            </button>
+          </div>
+        </div>
       </div>
       <h1 class="merch__title">Merch</h1>
       <ShopBrowser client:load products={items} />
@@ -45,16 +62,37 @@ if (open) {
 </BaseLayout>
 
 <script>
-  // Set by the /superfans landing page after a ticket-only purchase.
+  // Shown after a ticket-only purchase on /superfans: invite the customer to
+  // browse (merch is picked up at the show) with an auto-applied 15% offer.
+  // The promo itself is armed in sessionStorage by /superfans and applied on
+  // the checkout page — this modal is just the prompt.
   const KEY = 'wtn_upsell_msg';
   if (sessionStorage.getItem(KEY)) {
     sessionStorage.removeItem(KEY);
-    const el = document.getElementById('upsell-toast');
-    if (el) {
-      el.hidden = false;
-      window.setTimeout(() => {
-        el.hidden = true;
-      }, 7000);
+    const modal = document.getElementById('upsell-modal');
+    if (modal) {
+      const close = () => {
+        modal.hidden = true;
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+      };
+      // Open over the dimmed store.
+      modal.hidden = false;
+      modal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+      modal.querySelector<HTMLButtonElement>('.upsell-modal__btn--primary')?.focus();
+
+      // "Look around" (and the backdrop) collapse the modal onto the store.
+      modal.querySelectorAll<HTMLElement>('[data-upsell-close]').forEach((el) => {
+        el.addEventListener('click', close);
+      });
+      // "No thanks" goes straight to checkout (promo still auto-applies there).
+      document.getElementById('upsell-checkout')?.addEventListener('click', () => {
+        window.location.href = '/checkout';
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.hidden) close();
+      });
     }
   }
 </script>
@@ -75,17 +113,109 @@ if (open) {
     margin-bottom: 1.5rem;
   }
 
-  .upsell-toast {
-    max-width: 640px;
-    margin: 0 auto 2rem;
-    background: color-mix(in srgb, var(--accent) 12%, #0d0d0d);
+  /* Upsell modal — centered card over a dimmed store (shown after a
+     ticket-only purchase). Replaces the old auto-dismissing toast. */
+  .upsell-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+  }
+  .upsell-modal[hidden] {
+    display: none;
+  }
+  .upsell-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.72);
+    animation: wtnFadeIn 0.25s ease;
+  }
+  .upsell-modal__dialog {
+    position: relative;
+    z-index: 1;
+    width: min(30rem, 100%);
+    background: #0d0d0d;
     border: 1px solid var(--accent);
     border-radius: var(--radius);
-    color: var(--accent);
-    font-size: 0.85rem;
+    padding: 2rem 1.75rem;
     text-align: center;
-    padding: 0.85rem 1.25rem;
-    animation: wtnFadeIn 0.3s ease;
+    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.6);
+    animation: wtnPopIn 0.28s cubic-bezier(0.2, 0.8, 0.3, 1.2);
+  }
+  .upsell-modal__badge {
+    display: inline-block;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding: 0.35em 0.9em;
+    border-radius: 100px;
+    margin-bottom: 1rem;
+  }
+  .upsell-modal__title {
+    color: var(--accent);
+    font-size: 1.5rem;
+    margin: 0 0 0.75rem;
+  }
+  .upsell-modal__body {
+    color: var(--muted);
+    font-size: 0.92rem;
+    line-height: 1.6;
+    margin: 0 0 1.75rem;
+  }
+  .upsell-modal__body strong {
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .upsell-modal__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .upsell-modal__btn {
+    width: 100%;
+    padding: 0.85em 1.4em;
+    border-radius: 100px;
+    font-family: inherit;
+    font-weight: 800;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  }
+  .upsell-modal__btn--primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: 2px solid var(--accent);
+  }
+  .upsell-modal__btn--primary:hover {
+    background: transparent;
+    color: var(--accent);
+  }
+  .upsell-modal__btn--ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 2px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+  .upsell-modal__btn--ghost:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  @keyframes wtnPopIn {
+    from {
+      opacity: 0;
+      transform: translateY(12px) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
   }
 
   /* Floating checkout shortcut — stays put while browsing/scrolling the grid. */

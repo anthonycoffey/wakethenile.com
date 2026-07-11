@@ -84,6 +84,32 @@ function CheckoutForm() {
     }
   }, [checkout]);
 
+  // Auto-apply a promo armed by the presale upsell (see /superfans → /merch
+  // modal). Runs once the Payment Element is ready; on success it clears the
+  // flag so a reload can't reapply. Failures are silent — the customer can
+  // still type a code by hand.
+  const autoPromoTried = useRef(false);
+  useEffect(() => {
+    if (!checkout || !paymentReady || promoApplied || autoPromoTried.current) return;
+    const code = typeof window !== 'undefined' ? sessionStorage.getItem('wtn_promo') : null;
+    if (!code) return;
+    autoPromoTried.current = true;
+    (async () => {
+      try {
+        const res = await checkout.applyPromotionCode(code);
+        if (res?.type !== 'error') {
+          setPromoApplied(true);
+          setPromoCode(code);
+          setPromoIsError(false);
+          setPromoMsg('15% show offer applied.');
+          if (typeof window !== 'undefined') sessionStorage.removeItem('wtn_promo');
+        }
+      } catch {
+        /* leave the flag; manual entry still works */
+      }
+    })();
+  }, [checkout, paymentReady, promoApplied]);
+
   if (state?.type === 'loading') return <p className="checkout__msg">Loading secure checkout…</p>;
   if (state?.type === 'error')
     return (

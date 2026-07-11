@@ -120,7 +120,11 @@ const bundleOptionGroups = bundleOptionGroupsFor(BUNDLE_PRODUCT_ID) ?? [];
       qty: 1,
       image: cardImage(ticketCard),
     });
+    // Trigger the store upsell modal on /merch and arm the 15% presale offer,
+    // which auto-applies on the checkout page. Code maps to Stripe promo
+    // WTN15OFF (15% off). Update both if that code ever changes.
     sessionStorage.setItem('wtn_upsell_msg', '1');
+    sessionStorage.setItem('wtn_promo', 'WTN15OFF');
     window.location.href = '/merch';
   });
 
