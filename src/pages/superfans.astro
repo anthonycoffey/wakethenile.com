@@ -11,24 +11,30 @@ import { sanityFetch } from '../lib/sanity';
 import { urlForWidth } from '../lib/sanityImage';
 
 interface ProductImg {
-  slug: string;
+  id: string;
   images?: unknown[];
 }
 
-const query = `*[_type == "product" && slug.current in ["mega-superfan-bundle", "live-show-ticket"]]{
-  "slug": slug.current, images
+// Product IDs + cart line data. These match the products created in Sanity;
+// if you ever recreate these products, update the IDs here to match. We look
+// products up by _id (not slug) so a rename in the CMS can't break the page —
+// the bundle was previously slug "mega-superfan-bundle" and got renamed.
+const BUNDLE_PRODUCT_ID = 'b351d11f-4c78-4a1f-b36b-c10d951c96ea';
+const TICKET_PRODUCT_ID = '2480f00d-9317-4ed0-9406-bcef1e34bc71';
+
+const query = `*[_type == "product" && _id in [$bundleId, $ticketId]]{
+  "id": _id, images
 }`;
-const products = await sanityFetch<ProductImg[]>(query, {}, []);
-const bundle = products.find((p) => p.slug === 'mega-superfan-bundle');
-const ticket = products.find((p) => p.slug === 'live-show-ticket');
+const products = await sanityFetch<ProductImg[]>(
+  query,
+  { bundleId: BUNDLE_PRODUCT_ID, ticketId: TICKET_PRODUCT_ID },
+  [],
+);
+const bundle = products.find((p) => p.id === BUNDLE_PRODUCT_ID);
+const ticket = products.find((p) => p.id === TICKET_PRODUCT_ID);
 
 const bundleImg = urlForWidth(bundle?.images?.[0], 900);
 const posterImg = urlForWidth(ticket?.images?.[0], 900);
-
-// Product IDs + cart line data. These match the products created in Sanity;
-// if you ever recreate these products, update the IDs here to match.
-const BUNDLE_PRODUCT_ID = 'b351d11f-4c78-4a1f-b36b-c10d951c96ea';
-const TICKET_PRODUCT_ID = '2480f00d-9317-4ed0-9406-bcef1e34bc71';
 ---
 
 <BaseLayout
