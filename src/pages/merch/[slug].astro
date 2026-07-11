@@ -8,6 +8,7 @@ import { allProductSlugsQuery, productBySlugQuery } from '../../lib/queries';
 import { urlForWidth } from '../../lib/sanityImage';
 import { renderPortableText } from '../../lib/portableText';
 import { getStoreStatus } from '../../lib/store';
+import { bundleOptionGroupsFor } from '../../lib/bundleOptions';
 import type { Product } from '../../lib/types';
 
 export async function getStaticPaths() {
@@ -81,6 +82,7 @@ const descriptionHtml = product ? renderPortableText(product.description) : '';
           basePrice={product.price}
           baseStock={product.stock}
           variants={variants}
+          optionGroups={bundleOptionGroupsFor(product._id)}
         />
 
         {descriptionHtml && (

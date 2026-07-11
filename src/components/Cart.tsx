@@ -6,7 +6,9 @@ import {
   removeItem,
   cartCount,
   cartSubtotal,
+  lineKey,
 } from '../lib/cart';
+import { formatOptions } from '../lib/bundleOptions';
 import { formatPrice } from '../lib/format';
 import type { CartItem } from '../lib/types';
 
@@ -76,8 +78,11 @@ export default function Cart() {
             ) : (
               <>
                 <ul className="cartdrawer__items">
-                  {items.map((it) => (
-                    <li key={it.sku} className="cartline">
+                  {items.map((it) => {
+                    const key = lineKey(it);
+                    const opts = formatOptions(it.options);
+                    return (
+                    <li key={key} className="cartline">
                       <div className="cartline__media">
                         {it.image ? (
                           <img src={it.image} alt="" />
@@ -88,24 +93,26 @@ export default function Cart() {
                       <div className="cartline__info">
                         <span className="cartline__title">{it.title}</span>
                         {it.variantLabel && <span className="cartline__variant">{it.variantLabel}</span>}
+                        {opts && <span className="cartline__variant">{opts}</span>}
                         <div className="cartline__qty">
-                          <button aria-label="Decrease" onClick={() => updateQty(it.sku, it.qty - 1)}>
+                          <button aria-label="Decrease" onClick={() => updateQty(key, it.qty - 1)}>
                             −
                           </button>
                           <span>{it.qty}</span>
-                          <button aria-label="Increase" onClick={() => updateQty(it.sku, it.qty + 1)}>
+                          <button aria-label="Increase" onClick={() => updateQty(key, it.qty + 1)}>
                             +
                           </button>
                         </div>
                       </div>
                       <div className="cartline__right">
                         <span className="cartline__price">{formatPrice(it.unitPrice * it.qty)}</span>
-                        <button className="cartline__remove" onClick={() => removeItem(it.sku)}>
+                        <button className="cartline__remove" onClick={() => removeItem(key)}>
                           Remove
                         </button>
                       </div>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
 
                 <footer className="cartdrawer__foot">

@@ -135,6 +135,12 @@ export interface CommerceSettings {
   shippingRates?: ShippingRate[];
 }
 
+/** A customer-selected, non-priced option on a cart line (e.g. bundle tee/size). */
+export interface CartLineOption {
+  name: string;
+  value: string;
+}
+
 /** A line in the client-side cart (localStorage). */
 export interface CartItem {
   productId: string;
@@ -145,4 +151,10 @@ export interface CartItem {
   unitPrice: number;
   qty: number;
   image?: string;
+  /**
+   * Customer-chosen options that don't affect price (bundle tee + size). Two
+   * lines with the same SKU but different options are distinct — see
+   * `lineKey` in ./cart.
+   */
+  options?: CartLineOption[];
 }

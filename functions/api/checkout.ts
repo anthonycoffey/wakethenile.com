@@ -18,8 +18,21 @@ const STRIPE_VERSION = '2026-06-24.dahlia';
 // if those products are ever recreated with new IDs.
 const PICKUP_ELIGIBLE_PRODUCT_IDS = new Set([
   '2480f00d-9317-4ed0-9406-bcef1e34bc71', // Live Show Ticket
-  'b351d11f-4c78-4a1f-b36b-c10d951c96ea', // Mega Superfan Bundle
+  'b351d11f-4c78-4a1f-b36b-c10d951c96ea', // Ultimate Fan Experience (superfan bundle)
 ]);
+
+// Required tee/size selections for the bundle products. MIRRORS
+// src/lib/bundleOptions.ts (this runs in a separate Workers bundle and can't
+// import it — keep the two in sync). Validation here is authoritative; the
+// storefront selectors are only UX. See ADR 0007.
+const BUNDLE_TEE_AND_SIZE = [
+  { name: 'Tee', values: ['Obuntu Tee', 'Champion Tee'] },
+  { name: 'Size', values: ['S', 'M', 'L', 'XL', 'XXL'] },
+];
+const BUNDLE_OPTION_ALLOW: Record<string, { name: string; values: string[] }[]> = {
+  'b351d11f-4c78-4a1f-b36b-c10d951c96ea': BUNDLE_TEE_AND_SIZE, // Ultimate Fan Experience
+  'ca04e096-228b-4bee-a28b-46829ed68ecf': BUNDLE_TEE_AND_SIZE, // Ultimate Fan Merch Bundle
+};
 
 interface Env {
   STRIPE_SECRET_KEY?: string;
@@ -32,6 +45,8 @@ interface IncomingItem {
   productId: string;
   sku?: string;
   qty: number;
+  /** Customer-selected bundle options (tee/size); validated server-side. */
+  options?: { name?: string; value?: string }[];
 }
 
 const json = (body: unknown, status = 200) =>
@@ -157,9 +172,31 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
     if (stock <= 0) return json({ error: `"${which}" is sold out.` }, 409);
     if (stock < qty) return json({ error: `Only ${stock} of "${which}" left in stock.` }, 409);
 
+    // Bundle tee/size: rebuild the options from our allow-list (never trust the
+    // raw client strings) so a required choice can't be skipped or spoofed.
+    let cleanOptions: { name: string; value: string }[] | undefined;
+    const requiredGroups = BUNDLE_OPTION_ALLOW[item.productId];
+    if (requiredGroups) {
+      cleanOptions = [];
+      for (const group of requiredGroups) {
+        const val = (item.options || []).find((o) => o?.name === group.name)?.value;
+        if (!val || !group.values.includes(val)) {
+          return json({ error: `Please choose a ${group.name.toLowerCase()} for "${p.title}".` }, 409);
+        }
+        cleanOptions.push({ name: group.name, value: val });
+      }
+    }
+
+    const optionSuffix = cleanOptions?.length
+      ? ` — ${cleanOptions.map((o) => o.value).join(' / ')}`
+      : '';
+    const baseName = variant?.label ? `${p.title} — ${variant.label}` : p.title;
+    const metadata: Record<string, string> = { productId: p._id, sku: item.sku || '' };
+    if (cleanOptions?.length) metadata.optionsJson = JSON.stringify(cleanOptions);
+
     const product_data: Record<string, unknown> = {
-      name: variant?.label ? `${p.title} — ${variant.label}` : p.title,
-      metadata: { productId: p._id, sku: item.sku || '' },
+      name: `${baseName}${optionSuffix}`,
+      metadata,
     };
     if (p.imageUrl) product_data.images = [p.imageUrl];
     if (taxEnabled) product_data.tax_code = p.taxCode || defaultTaxCode;

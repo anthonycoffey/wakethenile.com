@@ -34,10 +34,35 @@ export const order = defineType({
             {name: 'productId', type: 'string', title: 'Product ID'},
             {name: 'qty', type: 'number', title: 'Qty'},
             {name: 'unitAmount', type: 'number', title: 'Unit price (USD)'},
+            {
+              // Customer-selected bundle options (tee/size). Written by the
+              // Stripe webhook; the choice a customer made at purchase.
+              name: 'options',
+              title: 'Selected options',
+              type: 'array',
+              of: [
+                defineArrayMember({
+                  type: 'object',
+                  fields: [
+                    {name: 'name', type: 'string', title: 'Option'},
+                    {name: 'value', type: 'string', title: 'Choice'},
+                  ],
+                  preview: {
+                    select: {name: 'name', value: 'value'},
+                    prepare: ({name, value}) => ({title: `${name}: ${value}`}),
+                  },
+                }),
+              ],
+            },
           ],
           preview: {
-            select: {title: 'title', qty: 'qty', sku: 'sku'},
-            prepare: ({title, qty, sku}) => ({title: `${qty}× ${title}`, subtitle: sku}),
+            select: {title: 'title', qty: 'qty', sku: 'sku', options: 'options'},
+            prepare: ({title, qty, sku, options}) => {
+              const opts = Array.isArray(options)
+                ? options.map((o: {value?: string}) => o?.value).filter(Boolean).join(' · ')
+                : ''
+              return {title: `${qty}× ${title}`, subtitle: [opts, sku].filter(Boolean).join(' — ')}
+            },
           },
         }),
       ],

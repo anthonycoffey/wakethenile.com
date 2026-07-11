@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { addItem, openCart } from '../lib/cart';
 import { formatPrice } from '../lib/format';
+import type { OptionGroup } from '../lib/bundleOptions';
+import type { CartLineOption } from '../lib/types';
 
 /** Serializable variant passed from the Astro page. */
 export interface PurchaseVariant {
@@ -20,6 +22,12 @@ export interface ProductPurchaseProps {
   /** Base stock used when the product has no variants. */
   baseStock?: number;
   variants: PurchaseVariant[];
+  /**
+   * Customer-selectable, non-priced options (bundle tee/size). When present,
+   * every group must be chosen before the item can be added. Orthogonal to
+   * `variants` — these don't affect price or stock. See ADR 0007.
+   */
+  optionGroups?: OptionGroup[];
 }
 
 export default function ProductPurchase({
@@ -30,6 +38,7 @@ export default function ProductPurchase({
   basePrice,
   baseStock,
   variants,
+  optionGroups = [],
 }: ProductPurchaseProps) {
   const hasVariants = variants.length > 0;
   const firstAvailable = hasVariants
@@ -38,6 +47,8 @@ export default function ProductPurchase({
   const [sku, setSku] = useState(firstAvailable);
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
+  // Chosen option value per group name; starts empty so nothing is pre-picked.
+  const [optionChoices, setOptionChoices] = useState<Record<string, string>>({});
 
   const selected = useMemo(
     () => variants.find((v) => v.sku === sku),
@@ -48,7 +59,8 @@ export default function ProductPurchase({
   // Stock is authoritative for both paths now; 0 = sold out.
   const stock = hasVariants ? (selected?.stock ?? 0) : (baseStock ?? 0);
   const soldOut = stock <= 0;
-  const canAdd = unitPrice > 0 && !soldOut && qty > 0;
+  const allOptionsChosen = optionGroups.every((g) => optionChoices[g.name]);
+  const canAdd = unitPrice > 0 && !soldOut && qty > 0 && allOptionsChosen;
   // A single unlabeled "One Size" variant reads better as a plain buy button.
   const showSizes = hasVariants && !(variants.length === 1 && /one size/i.test(variants[0].label));
 
@@ -58,8 +70,16 @@ export default function ProductPurchase({
     setAdded(false);
   }
 
+  function selectOption(group: string, value: string) {
+    setOptionChoices((prev) => ({ ...prev, [group]: value }));
+    setAdded(false);
+  }
+
   function handleAdd() {
     if (!canAdd) return;
+    const options: CartLineOption[] | undefined = optionGroups.length
+      ? optionGroups.map((g) => ({ name: g.name, value: optionChoices[g.name] }))
+      : undefined;
     addItem({
       productId,
       slug,
@@ -69,6 +89,7 @@ export default function ProductPurchase({
       unitPrice,
       qty: Math.min(qty, stock),
       image,
+      options,
     });
     setAdded(true);
     openCart();
@@ -78,6 +99,25 @@ export default function ProductPurchase({
   return (
     <div className="purchase">
       {unitPrice > 0 && <p className="purchase__price">{formatPrice(unitPrice)}</p>}
+
+      {optionGroups.map((group) => (
+        <div key={group.name}>
+          <span className="purchase__label">{group.name}</span>
+          <div className="purchase__sizes">
+            {group.values.map((value) => (
+              <button
+                key={value}
+                type="button"
+                className="purchase__size"
+                aria-pressed={optionChoices[group.name] === value}
+                onClick={() => selectOption(group.name, value)}
+              >
+                {value}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
 
       {showSizes && (
         <div>
@@ -125,7 +165,13 @@ export default function ProductPurchase({
       </div>
 
       <button className="purchase__add" onClick={handleAdd} disabled={!canAdd}>
-        {soldOut ? 'Sold Out' : added ? 'Added to Cart ✓' : 'Add to Cart'}
+        {soldOut
+          ? 'Sold Out'
+          : added
+            ? 'Added to Cart ✓'
+            : !allOptionsChosen
+              ? `Select ${optionGroups.map((g) => g.name.toLowerCase()).join(' & ')}`
+              : 'Add to Cart'}
       </button>
 
       {added && (

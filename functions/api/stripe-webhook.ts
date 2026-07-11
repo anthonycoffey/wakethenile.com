@@ -166,6 +166,23 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
     const lineItems = (session.line_items?.data ?? []).map((li: any) => {
       const meta = li.price?.product?.metadata ?? {};
       const qty = li.quantity ?? 1;
+      // Bundle tee/size selections travel as JSON in the product metadata.
+      let options: { _key: string; _type: 'object'; name: string; value: string }[] | undefined;
+      if (meta.optionsJson) {
+        try {
+          const parsed = JSON.parse(meta.optionsJson);
+          if (Array.isArray(parsed)) {
+            options = parsed.map((o: any, i: number) => ({
+              _key: `opt${i}`,
+              _type: 'object',
+              name: String(o?.name ?? ''),
+              value: String(o?.value ?? ''),
+            }));
+          }
+        } catch {
+          /* ignore malformed metadata */
+        }
+      }
       return {
         _key: li.id,
         _type: 'object',
@@ -174,6 +191,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
         productId: meta.productId || '',
         qty,
         unitAmount: fromCents(li.price?.unit_amount),
+        ...(options ? { options } : {}),
       };
     });
 
