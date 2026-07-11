@@ -340,6 +340,16 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
       .map((li: any) => `<li>${li.qty}× ${li.title} — $${(li.unitAmount ?? 0).toFixed(2)}</li>`)
       .join('');
     const total = (orderDoc.amountTotal ?? 0).toFixed(2);
+    // Does this order contain anything that actually ships (i.e. real merch,
+    // not the ticket or the pickup-at-show bundle)? Drives the closing line.
+    const hasShippableMerch = lineItems.some(
+      (li: any) => li.productId && li.productId !== TICKET_PRODUCT_ID && li.productId !== VIP_PRODUCT_ID,
+    );
+    const closingHtml = hasShippableMerch
+      ? `<p>We’ll email you again when it ships.</p>`
+      : isTicketOrder
+        ? `<p>See you on September 19 at Maggie Mae’s Upstairs! 🎶</p>`
+        : '';
     // Ticket buyers get a prominent link to their scannable pass.
     const origin = new URL(context.request.url).origin;
     const ticketHtml =
@@ -358,7 +368,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
         <ul>${itemsHtml}</ul>
         <p><strong>Total: $${total}</strong></p>
         ${ticketHtml}
-        <p>We’ll email you again when it ships.</p>`);
+        ${closingHtml}`);
     }
     if (admins.length) {
       await sendEmail(env, from, admins, `New order — $${total}`, `
