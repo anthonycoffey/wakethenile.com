@@ -20,6 +20,33 @@ export const order = defineType({
     }),
     defineField({name: 'email', title: 'Customer email', type: 'string', readOnly: true}),
     defineField({name: 'customerName', title: 'Customer name', type: 'string', readOnly: true}),
+
+    // --- Live-show ticketing (set by the Stripe webhook when the order
+    // contains a ticket/bundle; drives the QR pass + door check-in). ---
+    defineField({
+      name: 'ticketTier',
+      title: 'Ticket tier',
+      type: 'string',
+      readOnly: true,
+      options: {list: ['ga', 'vip'], layout: 'radio'},
+      description: 'ga = Live Show Ticket, vip = Ultimate Fan Experience. Absent on merch-only orders.',
+    }),
+    defineField({name: 'admits', title: 'Admits (# people)', type: 'number', readOnly: true}),
+    defineField({
+      name: 'ticketCode',
+      title: 'Ticket code',
+      type: 'string',
+      readOnly: true,
+      description: 'Unguessable id embedded in the QR (…/ticket?c=<code>).',
+    }),
+    defineField({
+      name: 'checkedInAt',
+      title: 'Checked in at',
+      type: 'datetime',
+      readOnly: true,
+      description: 'Stamped when scanned at the door. Empty = not yet arrived.',
+    }),
+    defineField({name: 'checkedInBy', title: 'Checked in by', type: 'string', readOnly: true}),
     defineField({
       name: 'lineItems',
       title: 'Items',
@@ -95,14 +122,25 @@ export const order = defineType({
   ],
   orderings: [
     {title: 'Newest', name: 'createdDesc', by: [{field: 'createdAt', direction: 'desc'}]},
+    {title: 'Checked in (newest)', name: 'checkedInDesc', by: [{field: 'checkedInAt', direction: 'desc'}]},
   ],
   preview: {
-    select: {name: 'customerName', email: 'email', total: 'amountTotal', status: 'fulfillmentStatus', date: 'createdAt'},
-    prepare({name, email, total, status, date}) {
+    select: {
+      name: 'customerName',
+      email: 'email',
+      total: 'amountTotal',
+      status: 'fulfillmentStatus',
+      date: 'createdAt',
+      tier: 'ticketTier',
+      checkedInAt: 'checkedInAt',
+    },
+    prepare({name, email, total, status, date, tier, checkedInAt}) {
       const when = date ? new Date(date).toLocaleDateString('en-US') : ''
+      const tierTag = tier ? ` [${String(tier).toUpperCase()}]` : ''
+      const door = tier ? (checkedInAt ? ' · ✅ checked in' : ' · ⬜ not arrived') : ''
       return {
-        title: `${name || email || 'Order'} — $${(total ?? 0).toFixed(2)}`,
-        subtitle: `${status ?? 'unfulfilled'}${when ? ` · ${when}` : ''}`,
+        title: `${name || email || 'Order'} — $${(total ?? 0).toFixed(2)}${tierTag}`,
+        subtitle: `${status ?? 'unfulfilled'}${when ? ` · ${when}` : ''}${door}`,
       }
     },
   },

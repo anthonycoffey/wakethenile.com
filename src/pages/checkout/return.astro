@@ -46,4 +46,42 @@ import CheckoutReturn from '../../components/CheckoutReturn.tsx';
     color: var(--accent-ink);
     text-decoration: none;
   }
+
+  /* Ticket / QR block (shown for show-ticket orders) */
+  .return :global(.return__ticket) {
+    margin: 1.5rem auto 2rem;
+    max-width: 22rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1.5rem;
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    border-radius: var(--radius);
+    background: #0d0d0d;
+  }
+  .return :global(.return__ticketlabel) {
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin: 0 0 1rem;
+  }
+  .return :global(.return__qr) {
+    width: min(220px, 60vw);
+    aspect-ratio: 1 / 1;
+    background: #fff;
+    padding: 10px;
+    border-radius: 10px;
+  }
+  .return :global(.return__qr svg) {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .return :global(.return__ticketlink) {
+    display: inline-block;
+    margin-top: 1rem;
+    color: var(--accent);
+    font-weight: 700;
+    text-decoration: underline;
+  }
 </style>
