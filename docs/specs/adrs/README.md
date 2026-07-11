@@ -16,6 +16,7 @@ that supersedes it.
 | [0005](./0005-font-metric-fallback-and-shift-proof-skeleton.md) | Metric-adjusted font fallback + shift-proof video skeleton | Accepted |
 | [0006](./0006-live-show-ticket-presale-on-stripe-store.md) | Live-show ticket presale on the hand-rolled Stripe store | Accepted |
 | [0007](./0007-bundle-line-item-options.md) | Per-line "options" for bundle tee selection (not priced variants) | Accepted |
+| [0008](./0008-qr-ticketing-door-checkin.md) | QR ticketing + door check-in (random code, Sanity check-in state) | Accepted |
 
 ## Adding an ADR
 

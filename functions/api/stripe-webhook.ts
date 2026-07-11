@@ -10,6 +10,14 @@
  */
 const STRIPE_VERSION = '2026-06-24.dahlia';
 
+// Admit-granting products for the Sep 19 show. Mirrors the ids in
+// functions/api/checkout.ts (PICKUP_ELIGIBLE_PRODUCT_IDS) — keep in sync if
+// these products are ever recreated. VIP = the Ultimate Fan Experience bundle.
+const TICKET_PRODUCT_ID = '2480f00d-9317-4ed0-9406-bcef1e34bc71'; // Live Show Ticket → GA
+const VIP_PRODUCT_ID = 'b351d11f-4c78-4a1f-b36b-c10d951c96ea'; // Ultimate Fan Experience → VIP
+// HubSpot contact property that flags a Sep 19 attendee (value "GA"/"VIP").
+const HUBSPOT_TICKET_PROPERTY = 'wtn_show_2026_09_19';
+
 interface Env {
   STRIPE_SECRET_KEY?: string;
   STRIPE_WEBHOOK_SECRET?: string;
@@ -18,6 +26,7 @@ interface Env {
   SANITY_API_VERSION?: string;
   SANITY_WRITE_TOKEN?: string;
   EMAIL_API_KEY?: string;
+  HUBSPOT_TOKEN?: string;
 }
 
 const enc = new TextEncoder();
@@ -108,6 +117,47 @@ async function sendEmail(env: Env, from: string, to: string[], subject: string, 
     });
   } catch (e) {
     console.error('[webhook] email send failed:', e);
+  }
+}
+
+// Upsert a HubSpot contact for a ticket buyer, tagging tier on a custom
+// property. Best-effort: guarded on HUBSPOT_TOKEN, never throws.
+async function hubspotUpsertAttendee(
+  env: Env,
+  email: string | null,
+  name: string | null,
+  tier: 'ga' | 'vip',
+): Promise<void> {
+  if (!env.HUBSPOT_TOKEN || !email) return;
+  const [firstname, ...rest] = (name ?? '').trim().split(/\s+/);
+  const lastname = rest.join(' ');
+  try {
+    const res = await fetch('https://api.hubapi.com/crm/v3/objects/contacts/batch/upsert', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${env.HUBSPOT_TOKEN}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        inputs: [
+          {
+            idProperty: 'email',
+            id: email,
+            properties: {
+              email,
+              ...(firstname ? { firstname } : {}),
+              ...(lastname ? { lastname } : {}),
+              [HUBSPOT_TICKET_PROPERTY]: tier.toUpperCase(),
+            },
+          },
+        ],
+      }),
+    });
+    if (!res.ok) {
+      console.error('[webhook] HubSpot upsert failed:', res.status, await res.text());
+    }
+  } catch (e) {
+    console.error('[webhook] HubSpot upsert error:', e);
   }
 }
 
@@ -202,6 +252,19 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
       null;
     const addr = ship?.address ?? null;
 
+    // Live-show ticketing: if this order includes a ticket/bundle, stamp a QR
+    // code + tier + admit count so it becomes a scannable pass at the door.
+    const admits = lineItems
+      .filter((li: any) => li.productId === TICKET_PRODUCT_ID || li.productId === VIP_PRODUCT_ID)
+      .reduce((n: number, li: any) => n + (li.qty ?? 1), 0);
+    const isTicketOrder = admits > 0;
+    const ticketTier: 'ga' | 'vip' | undefined = isTicketOrder
+      ? lineItems.some((li: any) => li.productId === VIP_PRODUCT_ID)
+        ? 'vip'
+        : 'ga'
+      : undefined;
+    const ticketCode = isTicketOrder ? crypto.randomUUID() : undefined;
+
     const orderDoc = {
       _id: orderId,
       _type: 'order',
@@ -209,6 +272,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
       email: session.customer_details?.email ?? null,
       customerName: session.customer_details?.name ?? ship?.name ?? null,
       lineItems,
+      ...(isTicketOrder ? { ticketTier, admits, ticketCode } : {}),
       amountSubtotal: fromCents(session.amount_subtotal),
       amountShipping: fromCents(session.total_details?.amount_shipping),
       amountTax: fromCents(session.total_details?.amount_tax),
@@ -263,6 +327,11 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
     // One transaction: create the order (idempotent) + decrement stock.
     await sanityMutate(env, [{ createIfNotExists: orderDoc }, ...patches]);
 
+    // Push ticket buyers into HubSpot (best effort; never blocks the 200).
+    if (isTicketOrder && ticketTier) {
+      await hubspotUpsertAttendee(env, orderDoc.email, orderDoc.customerName, ticketTier);
+    }
+
     // Confirmation + admin alert (best effort; never blocks the 200).
     const settings = await sanityQuery<any>(env, SETTINGS_QUERY, {}).catch(() => null);
     const from = settings?.fromEmail;
@@ -271,11 +340,24 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
       .map((li: any) => `<li>${li.qty}× ${li.title} — $${(li.unitAmount ?? 0).toFixed(2)}</li>`)
       .join('');
     const total = (orderDoc.amountTotal ?? 0).toFixed(2);
+    // Ticket buyers get a prominent link to their scannable pass.
+    const origin = new URL(context.request.url).origin;
+    const ticketHtml =
+      isTicketOrder && ticketCode
+        ? `<div style="margin:20px 0;padding:16px;border:2px solid #caa04a;border-radius:10px">
+             <p style="margin:0 0 8px"><strong>🎟️ Your ${ticketTier === 'vip' ? 'VIP' : 'show'} ticket${
+               (admits ?? 1) > 1 ? `s (admits ${admits})` : ''
+             }</strong></p>
+             <p style="margin:0 0 12px">Show this at the door on September 19 — save it or screenshot it:</p>
+             <p style="margin:0"><a href="${origin}/ticket?c=${ticketCode}">View your ticket &amp; QR code →</a></p>
+           </div>`
+        : '';
     if (orderDoc.email) {
       await sendEmail(env, from, [orderDoc.email], 'Your Wake the Nile order is confirmed', `
         <h2>Thank you for your order!</h2>
         <ul>${itemsHtml}</ul>
         <p><strong>Total: $${total}</strong></p>
+        ${ticketHtml}
         <p>We’ll email you again when it ships.</p>`);
     }
     if (admins.length) {

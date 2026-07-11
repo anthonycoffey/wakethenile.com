@@ -1,0 +1,125 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import AttendeeList from '../components/AttendeeList.tsx';
+---
+
+<BaseLayout title="Attendees" footer="scroll">
+  <section class="attpage">
+    <AttendeeList client:load />
+  </section>
+</BaseLayout>
+
+<style>
+  .attpage {
+    max-width: 780px;
+    margin-inline: auto;
+    padding: calc(8vh + 4.5rem) 1.25rem 5rem;
+  }
+  .attpage :global(.att__title) {
+    color: var(--accent);
+    font-size: clamp(2rem, 1.6rem + 2vw, 2.75rem);
+    margin: 0;
+  }
+  .attpage :global(.att__sub) {
+    color: var(--muted);
+    text-align: center;
+  }
+
+  /* PIN lock */
+  .attpage :global(.att__lock) {
+    max-width: 20rem;
+    margin: 2rem auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    text-align: center;
+  }
+  .attpage :global(.att__pin),
+  .attpage :global(.att__search) {
+    padding: 0.7rem 0.9rem;
+    background: #111;
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    border-radius: 8px;
+    color: var(--accent);
+    font-family: inherit;
+    font-size: 1rem;
+  }
+  .attpage :global(.att__btn),
+  .attpage :global(.att__csv) {
+    padding: 0.7rem 1.2rem;
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: 2px solid var(--accent);
+    border-radius: 100px;
+    font-family: inherit;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    font-size: 0.8rem;
+  }
+  .attpage :global(.att__err) {
+    color: #e46060;
+    font-size: 0.85rem;
+  }
+
+  /* Table */
+  .attpage :global(.att__head) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+  }
+  .attpage :global(.att__stats) {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin: 0 0 1rem;
+  }
+  .attpage :global(.att__stats strong) {
+    color: var(--accent);
+  }
+  .attpage :global(.att__search) {
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+  .attpage :global(.att__tablewrap) {
+    overflow-x: auto;
+  }
+  .attpage :global(.att__table) {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+  .attpage :global(.att__table th),
+  .attpage :global(.att__table td) {
+    text-align: left;
+    padding: 0.6rem 0.5rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--accent) 15%, transparent);
+    color: var(--accent);
+    vertical-align: top;
+  }
+  .attpage :global(.att__table th) {
+    color: var(--muted);
+    text-transform: uppercase;
+    font-size: 0.68rem;
+    letter-spacing: 1px;
+  }
+  .attpage :global(.att__table a) {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+  .attpage :global(.att__email) {
+    display: block;
+    color: var(--muted);
+    font-size: 0.72rem;
+  }
+  .attpage :global(.att__row--in) {
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+  }
+  .attpage :global(.att__empty) {
+    color: var(--muted);
+    text-align: center;
+    padding: 1.5rem;
+  }
+</style>

@@ -24,6 +24,7 @@
     "@stripe/stripe-js": "^9.8.0",
     "@tailwindcss/vite": "^4.1.0",
     "astro": "^5.18.0",
+    "qrcode-generator": "^2.0.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "swiper": "^11.2.0",
