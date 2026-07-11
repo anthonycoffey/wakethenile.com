@@ -85,29 +85,44 @@ function CheckoutForm() {
   }, [checkout]);
 
   // Auto-apply a promo armed by the presale upsell (see /superfans → /merch
-  // modal). Runs once the Payment Element is ready; on success it clears the
-  // flag so a reload can't reapply. Failures are silent — the customer can
-  // still type a code by hand.
-  const autoPromoTried = useRef(false);
+  // modal). On success it clears the flag so a reload can't reapply.
+  //
+  // Stripe's applyPromotionCode() can spuriously return "invalid" for a valid
+  // code if it's called the instant the Payment Element reports ready (a known
+  // timing quirk — same reason the manual Apply button is gated on
+  // `paymentReady`). A single immediate attempt therefore fails silently and a
+  // human clicking "Apply" a few seconds later succeeds. So we retry with
+  // backoff across a few seconds before giving up; on exhaustion the flag is
+  // left in place so a reload or manual entry can still apply it.
+  const autoPromoStarted = useRef(false);
   useEffect(() => {
-    if (!checkout || !paymentReady || promoApplied || autoPromoTried.current) return;
+    if (!checkout || !paymentReady || promoApplied || autoPromoStarted.current) return;
     const code = typeof window !== 'undefined' ? sessionStorage.getItem('wtn_promo') : null;
     if (!code) return;
-    autoPromoTried.current = true;
+    autoPromoStarted.current = true;
+    let cancelled = false;
     (async () => {
-      try {
-        const res = await checkout.applyPromotionCode(code);
-        if (res?.type !== 'error') {
-          setPromoApplied(true);
-          setPromoCode(code);
-          setPromoIsError(false);
-          setPromoMsg('15% show offer applied.');
-          if (typeof window !== 'undefined') sessionStorage.removeItem('wtn_promo');
+      for (let attempt = 0; attempt < 5 && !cancelled; attempt++) {
+        await new Promise((r) => setTimeout(r, attempt === 0 ? 600 : 900));
+        if (cancelled) return;
+        try {
+          const res = await checkout.applyPromotionCode(code);
+          if (res?.type !== 'error') {
+            setPromoApplied(true);
+            setPromoCode(code);
+            setPromoIsError(false);
+            setPromoMsg('15% show offer applied.');
+            if (typeof window !== 'undefined') sessionStorage.removeItem('wtn_promo');
+            return;
+          }
+        } catch {
+          /* transient — retry */
         }
-      } catch {
-        /* leave the flag; manual entry still works */
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [checkout, paymentReady, promoApplied]);
 
   if (state?.type === 'loading') return <p className="checkout__msg">Loading secure checkout…</p>;
@@ -130,11 +145,6 @@ function CheckoutForm() {
     setPromoIsError(false);
     try {
       const res = await checkout.applyPromotionCode(code);
-      // TEMP diagnostic logging — remove once the "invalid code" issue is
-      // root-caused. Prints Stripe's full error payload (code/type/etc.),
-      // not just the message, so we can see exactly why it's rejected.
-      // eslint-disable-next-line no-console
-      console.log('[promo debug] full response:', JSON.stringify(res, null, 2));
       if (res?.type === 'error') {
         setPromoIsError(true);
         setPromoMsg(res.error?.message ?? 'That code isn’t valid.');

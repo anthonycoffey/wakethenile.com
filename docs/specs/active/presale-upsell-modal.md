@@ -21,7 +21,10 @@ at the show) and a real, time-limited **15% off** incentive that applies without
    - **"No thanks — go to checkout"** → navigates to `/checkout`.
 3. `/checkout` (`CheckoutCustom.tsx`) reads `wtn_promo` and, once the Payment Element is ready, calls
    `applyPromotionCode()` automatically, shows it as applied, and clears the flag. The code lives only in
-   `/superfans`; checkout applies whatever was armed. Failure is silent (manual promo entry still works).
+   `/superfans`; checkout applies whatever was armed. Because Stripe's `applyPromotionCode()` can spuriously
+   return "invalid" if called the instant the Payment Element reports ready, the auto-apply **retries with
+   backoff** (5 attempts over ~4s) before giving up; on exhaustion the flag is left so a reload or manual entry
+   still works.
 
 ## Discount
 
