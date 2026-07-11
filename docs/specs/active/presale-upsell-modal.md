@@ -25,8 +25,10 @@ at the show) and a real, time-limited **15% off** incentive that applies without
 
 ## Discount
 
-`WTN15OFF` → Stripe coupon `DFFqDqbe`, **15% off**, live, capped at 30 redemptions. Applies to the whole checkout
-session (Stripe percent-off coupon).
+`WTN15OFF` → Stripe coupon `DFFqDqbe`, **15% off**, live, capped at 30 redemptions, **expires 2026-07-17 23:59
+America/Chicago** (`expires_at` set on the code, matching the modal countdown). Applies to the whole checkout
+session (Stripe percent-off coupon). Note: Stripe locks a promotion code's `expires_at` at creation — this expiry
+was set by archiving the original code and recreating `WTN15OFF` with the deadline baked in.
 
 ## Countdown
 
@@ -39,6 +41,6 @@ The modal shows a live countdown to a fixed deadline: **Fri 2026-07-17 23:59 Ame
 
 - The offer is armed on arrival, so it also applies if the customer skips browsing and checks out with just the
   ticket (15% off the ticket). Acceptable as goodwill; revisit if it should be gated to "Look around" only.
-- **The countdown is display-only.** To make expiry truthful, the Stripe promo code `WTN15OFF` should also get an
-  `expires_at` matching the deadline (currently no expiry) — otherwise the code still works after the timer hits
-  zero. Pending owner approval to set it.
+- The countdown deadline and the Stripe code's `expires_at` are aligned (both 2026-07-17 23:59 America/Chicago),
+  so the offer stops in Stripe exactly when the timer hits zero. Change both together if the deadline ever moves
+  (a code's expiry can't be edited — archive + recreate).
