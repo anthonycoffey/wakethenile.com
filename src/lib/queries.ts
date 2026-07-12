@@ -63,7 +63,9 @@ const IN_STOCK = `select(
 const NOT_HIDDEN = `!("hidden" in coalesce(tags, []))`;
 
 // Grid card: enough to render a tile + a derived "from" price and stock state.
-export const allProductsQuery = `*[_type == "product" && ${NOT_DRAFT} && ${NOT_HIDDEN}] | order(title asc){
+// Manual "Sort order" first (lower numbers lead); products without one fall
+// back to alphabetical after the ordered ones.
+export const allProductsQuery = `*[_type == "product" && ${NOT_DRAFT} && ${NOT_HIDDEN}] | order(coalesce(order, 999999) asc, title asc){
   _id, title, "slug": slug.current, images, price,
   "category": category->title, tags,
   variants[]${VARIANT},
