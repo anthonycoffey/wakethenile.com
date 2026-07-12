@@ -22,7 +22,7 @@ export interface OptionGroup {
 }
 
 const TEE_AND_SIZE: OptionGroup[] = [
-  { name: 'Tee', values: ['Obuntu Tee', 'Champion Tee'] },
+  { name: 'Tee', values: ['Obuntu Tee (Red)', 'Champion Tee (Black)'] },
   { name: 'Size', values: ['S', 'M', 'L', 'XL', 'XXL'] },
 ];
 
