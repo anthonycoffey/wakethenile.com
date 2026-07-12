@@ -26,7 +26,7 @@ const PICKUP_ELIGIBLE_PRODUCT_IDS = new Set([
 // import it — keep the two in sync). Validation here is authoritative; the
 // storefront selectors are only UX. See ADR 0007.
 const BUNDLE_TEE_AND_SIZE = [
-  { name: 'Tee', values: ['Obuntu Tee', 'Champion Tee'] },
+  { name: 'Tee', values: ['Obuntu Tee (Red)', 'Champion Tee (Black)'] },
   { name: 'Size', values: ['S', 'M', 'L', 'XL', 'XXL'] },
 ];
 const BUNDLE_OPTION_ALLOW: Record<string, { name: string; values: string[] }[]> = {

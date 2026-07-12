@@ -25,6 +25,14 @@ export const product = defineType({
       validation: (Rule) => Rule.required(),
     }),
     defineField({
+      name: 'order',
+      title: 'Sort order',
+      type: 'number',
+      description:
+        'Controls the order on the Merch page — lower numbers show first (1, 2, 3…). ' +
+        'Leave blank to fall back to alphabetical.',
+    }),
+    defineField({
       name: 'images',
       title: 'Images',
       type: 'array',
@@ -112,10 +120,16 @@ export const product = defineType({
     }),
     defineField({name: 'seo', title: 'SEO', type: 'seo'}),
   ],
+  orderings: [
+    {title: 'Manual order', name: 'orderAsc', by: [{field: 'order', direction: 'asc'}]},
+    {title: 'Title A–Z', name: 'titleAsc', by: [{field: 'title', direction: 'asc'}]},
+  ],
   preview: {
-    select: {title: 'title', media: 'images.0', subtitle: 'price'},
-    prepare({title, media, subtitle}) {
-      return {title, media, subtitle: subtitle ? `$${subtitle}` : ''}
+    select: {title: 'title', media: 'images.0', subtitle: 'price', order: 'order'},
+    prepare({title, media, subtitle, order}) {
+      const price = subtitle ? `$${subtitle}` : ''
+      const pos = typeof order === 'number' ? `#${order}` : ''
+      return {title, media, subtitle: [pos, price].filter(Boolean).join(' · ')}
     },
   },
 })
