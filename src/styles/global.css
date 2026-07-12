@@ -731,6 +731,23 @@
 .ccheckout__promo-input:disabled {
   opacity: 0.6;
 }
+/* Full-name field for pickup-only (ticket) checkout — full width, normal case. */
+.ccheckout__nameinput {
+  width: 100%;
+  text-transform: none;
+  letter-spacing: normal;
+}
+/* "Digital ticket — nothing ships" notice on pickup-only checkout. */
+.ccheckout__notice {
+  margin: 0.85rem 0 0;
+  padding: 0.75rem 0.9rem;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: var(--radius);
+  color: var(--accent);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
 .ccheckout__promo-btn {
   flex: 0 0 auto;
   background: transparent;

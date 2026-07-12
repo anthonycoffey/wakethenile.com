@@ -233,6 +233,12 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
     });
   }
 
+  // A pickup-only cart (every line is a ticket / show-pickup bundle) ships
+  // nothing — so we skip the shipping address + options entirely. The storefront
+  // shows a "details emailed to you" notice and collects just the buyer's name.
+  const allPickup =
+    items.length > 0 && items.every((i) => PICKUP_ELIGIBLE_PRODUCT_IDS.has(i.productId));
+
   const origin = new URL(request.url).origin;
   const params: Record<string, unknown> = {
     mode: 'payment',
@@ -241,12 +247,14 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
     // apply. Pairs with <CheckoutElementsProvider> on the client.
     ui_mode: 'elements',
     line_items,
-    shipping_address_collection: { allowed_countries: countries },
-    shipping_options,
     allow_promotion_codes: true,
     return_url: `${origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
     metadata: { source: 'wtn-web' },
   };
+  if (!allPickup) {
+    params.shipping_address_collection = { allowed_countries: countries };
+    params.shipping_options = shipping_options;
+  }
   if (taxEnabled) params.automatic_tax = { enabled: true };
 
   const res = await fetch('https://api.stripe.com/v1/checkout/sessions', {
