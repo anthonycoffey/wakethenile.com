@@ -55,12 +55,19 @@ function amountText(a: any): string {
 
 // Pickup-only products (ticket + VIP experience bundle) — these carts ship
 // nothing. Mirrors PICKUP_ELIGIBLE_PRODUCT_IDS in functions/api/checkout.ts.
-const PICKUP_PRODUCT_IDS = new Set([
-  '2480f00d-9317-4ed0-9406-bcef1e34bc71',
-  'b351d11f-4c78-4a1f-b36b-c10d951c96ea',
-]);
+const TICKET_PRODUCT_ID = '2480f00d-9317-4ed0-9406-bcef1e34bc71';
+const EXPERIENCE_PRODUCT_ID = 'b351d11f-4c78-4a1f-b36b-c10d951c96ea'; // includes pickup-at-show merch
+const PICKUP_PRODUCT_IDS = new Set([TICKET_PRODUCT_ID, EXPERIENCE_PRODUCT_ID]);
 
-function CheckoutForm({ allPickup, clientSecret }: { allPickup: boolean; clientSecret: string }) {
+function CheckoutForm({
+  allPickup,
+  hasPickupMerch,
+  clientSecret,
+}: {
+  allPickup: boolean;
+  hasPickupMerch: boolean;
+  clientSecret: string;
+}) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const state = useCheckoutElements() as any;
   const [submitting, setSubmitting] = useState(false);
@@ -254,8 +261,17 @@ function CheckoutForm({ allPickup, clientSecret }: { allPickup: boolean; clientS
             aria-label="Full name"
           />
           <p className="ccheckout__notice">
-            🎟️ Digital ticket — your ticket &amp; QR code are shown right after checkout and
-            emailed to you. Nothing ships.
+            {hasPickupMerch ? (
+              <>
+                🎟️ Your ticket &amp; merch — your QR ticket is shown right after checkout and emailed
+                to you; pick up your merch at the Merch booth on show night. Nothing ships.
+              </>
+            ) : (
+              <>
+                🎟️ Digital ticket — your ticket &amp; QR code are shown right after checkout and
+                emailed to you. Nothing ships.
+              </>
+            )}
           </p>
         </section>
       ) : (
@@ -365,6 +381,7 @@ export default function CheckoutCustom({ publishableKey }: Props) {
   const [ui, setUi] = useState<'loading' | 'empty' | 'error' | 'ready'>('loading');
   const [err, setErr] = useState<string | null>(null);
   const [allPickup, setAllPickup] = useState(false);
+  const [hasPickupMerch, setHasPickupMerch] = useState(false);
 
   useEffect(() => {
     if (!publishableKey) {
@@ -384,6 +401,7 @@ export default function CheckoutCustom({ publishableKey }: Props) {
       return;
     }
     setAllPickup(cart.length > 0 && cart.every((i) => PICKUP_PRODUCT_IDS.has(i.productId)));
+    setHasPickupMerch(cart.some((i) => i.productId === EXPERIENCE_PRODUCT_ID));
     let cancelled = false;
     (async () => {
       try {
@@ -430,7 +448,7 @@ export default function CheckoutCustom({ publishableKey }: Props) {
       stripe={stripePromise}
       options={{ clientSecret: clientSecret!, elementsOptions: { appearance } }}
     >
-      <CheckoutForm allPickup={allPickup} clientSecret={clientSecret!} />
+      <CheckoutForm allPickup={allPickup} hasPickupMerch={hasPickupMerch} clientSecret={clientSecret!} />
     </CheckoutElementsProvider>
   );
 }
