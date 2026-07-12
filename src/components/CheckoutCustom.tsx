@@ -53,11 +53,19 @@ function amountText(a: any): string {
   return String(a);
 }
 
-function CheckoutForm() {
+// Pickup-only products (ticket + VIP experience bundle) — these carts ship
+// nothing. Mirrors PICKUP_ELIGIBLE_PRODUCT_IDS in functions/api/checkout.ts.
+const PICKUP_PRODUCT_IDS = new Set([
+  '2480f00d-9317-4ed0-9406-bcef1e34bc71',
+  'b351d11f-4c78-4a1f-b36b-c10d951c96ea',
+]);
+
+function CheckoutForm({ allPickup, clientSecret }: { allPickup: boolean; clientSecret: string }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const state = useCheckoutElements() as any;
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [buyerName, setBuyerName] = useState('');
   const shippingInit = useRef(false);
 
   // --- Promo code state ---
@@ -201,6 +209,22 @@ function CheckoutForm() {
     setSubmitting(true);
     setMessage(null);
     try {
+      // Pickup-only orders collect no address, so persist the typed name onto
+      // the session for the order/ticket. Best-effort — never blocks payment.
+      if (allPickup && buyerName.trim()) {
+        try {
+          await fetch('/api/set-buyer-name', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              sessionId: clientSecret.split('_secret_')[0],
+              name: buyerName.trim(),
+            }),
+          });
+        } catch {
+          /* non-blocking */
+        }
+      }
       const res = await checkout.confirm();
       if (res?.type === 'error') setMessage(res.error?.message ?? 'Payment failed.');
       // success → Stripe redirects to the return_url automatically.
@@ -217,10 +241,29 @@ function CheckoutForm() {
         <ContactDetailsElement />
       </section>
 
-      <section className="ccheckout__section">
-        <h3 className="ccheckout__h">Shipping address</h3>
-        <ShippingAddressElement />
-      </section>
+      {allPickup ? (
+        <section className="ccheckout__section">
+          <h3 className="ccheckout__h">Your name</h3>
+          <input
+            type="text"
+            className="ccheckout__promo-input ccheckout__nameinput"
+            placeholder="Full name"
+            value={buyerName}
+            onChange={(e) => setBuyerName(e.target.value)}
+            autoComplete="name"
+            aria-label="Full name"
+          />
+          <p className="ccheckout__notice">
+            🎟️ Digital ticket — your ticket &amp; QR code are shown right after checkout and
+            emailed to you. Nothing ships.
+          </p>
+        </section>
+      ) : (
+        <section className="ccheckout__section">
+          <h3 className="ccheckout__h">Shipping address</h3>
+          <ShippingAddressElement />
+        </section>
+      )}
 
       {checkout.shippingOptions?.length > 0 && (
         <section className="ccheckout__section">
@@ -300,7 +343,11 @@ function CheckoutForm() {
         </div>
       )}
 
-      <button className="ccheckout__pay" type="submit" disabled={submitting || state.type !== 'success'}>
+      <button
+        className="ccheckout__pay"
+        type="submit"
+        disabled={submitting || state.type !== 'success' || (allPickup && !buyerName.trim())}
+      >
         {submitting ? 'Processing…' : total ? `Pay ${total}` : 'Pay now'}
       </button>
 
@@ -317,6 +364,7 @@ export default function CheckoutCustom({ publishableKey }: Props) {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [ui, setUi] = useState<'loading' | 'empty' | 'error' | 'ready'>('loading');
   const [err, setErr] = useState<string | null>(null);
+  const [allPickup, setAllPickup] = useState(false);
 
   useEffect(() => {
     if (!publishableKey) {
@@ -324,7 +372,8 @@ export default function CheckoutCustom({ publishableKey }: Props) {
       setErr('Checkout isn’t configured yet — the Stripe publishable key is missing.');
       return;
     }
-    const items = getCart().map((i) => ({
+    const cart = getCart();
+    const items = cart.map((i) => ({
       productId: i.productId,
       sku: i.sku,
       qty: i.qty,
@@ -334,6 +383,7 @@ export default function CheckoutCustom({ publishableKey }: Props) {
       setUi('empty');
       return;
     }
+    setAllPickup(cart.length > 0 && cart.every((i) => PICKUP_PRODUCT_IDS.has(i.productId)));
     let cancelled = false;
     (async () => {
       try {
@@ -380,7 +430,7 @@ export default function CheckoutCustom({ publishableKey }: Props) {
       stripe={stripePromise}
       options={{ clientSecret: clientSecret!, elementsOptions: { appearance } }}
     >
-      <CheckoutForm />
+      <CheckoutForm allPickup={allPickup} clientSecret={clientSecret!} />
     </CheckoutElementsProvider>
   );
 }

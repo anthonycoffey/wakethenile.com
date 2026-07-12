@@ -270,7 +270,9 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
       _type: 'order',
       fulfillmentStatus: 'unfulfilled',
       email: session.customer_details?.email ?? null,
-      customerName: session.customer_details?.name ?? ship?.name ?? null,
+      // For pickup-only orders there's no address name; /api/set-buyer-name
+      // stashes it in session metadata instead.
+      customerName: session.customer_details?.name ?? session.metadata?.buyerName ?? ship?.name ?? null,
       lineItems,
       ...(isTicketOrder ? { ticketTier, admits, ticketCode } : {}),
       amountSubtotal: fromCents(session.amount_subtotal),
