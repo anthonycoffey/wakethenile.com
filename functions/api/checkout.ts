@@ -25,13 +25,19 @@ const PICKUP_ELIGIBLE_PRODUCT_IDS = new Set([
 // src/lib/bundleOptions.ts (this runs in a separate Workers bundle and can't
 // import it — keep the two in sync). Validation here is authoritative; the
 // storefront selectors are only UX. See ADR 0007.
-const BUNDLE_TEE_AND_SIZE = [
-  { name: 'Tee', values: ['Obuntu Tee (Red)', 'Champion Tee (Black)'] },
-  { name: 'Size', values: ['S', 'M', 'L', 'XL', 'XXL'] },
+// Two tees per bundle: a style + size for each. Mirrors TWO_TEES in
+// src/lib/bundleOptions.ts — keep the group names/values identical.
+const TEE_VALUES = ['Obuntu Tee (Red)', 'Champion Tee (Black)'];
+const SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
+const BUNDLE_TWO_TEES = [
+  { name: 'Tee #1', values: TEE_VALUES },
+  { name: 'Size #1', values: SIZES },
+  { name: 'Tee #2', values: TEE_VALUES },
+  { name: 'Size #2', values: SIZES },
 ];
 const BUNDLE_OPTION_ALLOW: Record<string, { name: string; values: string[] }[]> = {
-  'b351d11f-4c78-4a1f-b36b-c10d951c96ea': BUNDLE_TEE_AND_SIZE, // Ultimate Fan Experience
-  'ca04e096-228b-4bee-a28b-46829ed68ecf': BUNDLE_TEE_AND_SIZE, // Ultimate Fan Merch Bundle
+  'b351d11f-4c78-4a1f-b36b-c10d951c96ea': BUNDLE_TWO_TEES, // Ultimate Fan Experience
+  'ca04e096-228b-4bee-a28b-46829ed68ecf': BUNDLE_TWO_TEES, // Ultimate Fan Merch Bundle
 };
 
 interface Env {
