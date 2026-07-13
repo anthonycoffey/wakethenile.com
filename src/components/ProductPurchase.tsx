@@ -170,7 +170,9 @@ export default function ProductPurchase({
           : added
             ? 'Added to Cart ✓'
             : !allOptionsChosen
-              ? `Select ${optionGroups.map((g) => g.name.toLowerCase()).join(' & ')}`
+              ? optionGroups.length > 2
+                ? 'Select your options'
+                : `Select ${optionGroups.map((g) => g.name.toLowerCase()).join(' & ')}`
               : 'Add to Cart'}
       </button>
 

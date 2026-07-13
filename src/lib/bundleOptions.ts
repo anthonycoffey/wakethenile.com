@@ -21,16 +21,24 @@ export interface OptionGroup {
   values: string[];
 }
 
-const TEE_AND_SIZE: OptionGroup[] = [
-  { name: 'Tee', values: ['Obuntu Tee (Red)', 'Champion Tee (Black)'] },
-  { name: 'Size', values: ['S', 'M', 'L', 'XL', 'XXL'] },
+// The bundles now include TWO tees — the customer picks a style + size for
+// each (so: two of one style, or one of each). Keep the group NAMES in lockstep
+// with the mirrored allow-list in functions/api/checkout.ts.
+const TEE_VALUES = ['Obuntu Tee (Red)', 'Champion Tee (Black)'];
+const SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
+
+const TWO_TEES: OptionGroup[] = [
+  { name: 'Tee #1', values: TEE_VALUES },
+  { name: 'Size #1', values: SIZES },
+  { name: 'Tee #2', values: TEE_VALUES },
+  { name: 'Size #2', values: SIZES },
 ];
 
 export const BUNDLE_OPTION_GROUPS: Record<string, OptionGroup[]> = {
   // Ultimate Fan Experience (sold on /superfans)
-  'b351d11f-4c78-4a1f-b36b-c10d951c96ea': TEE_AND_SIZE,
+  'b351d11f-4c78-4a1f-b36b-c10d951c96ea': TWO_TEES,
   // Ultimate Fan Merch Bundle (sold on /merch/merch-bundle)
-  'ca04e096-228b-4bee-a28b-46829ed68ecf': TEE_AND_SIZE,
+  'ca04e096-228b-4bee-a28b-46829ed68ecf': TWO_TEES,
 };
 
 /** Option groups for a product, or `undefined` if it has no bundle options. */

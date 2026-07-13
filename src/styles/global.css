@@ -737,6 +737,12 @@
   text-transform: none;
   letter-spacing: normal;
 }
+/* Small note under the shipping options (US-only). */
+.ccheckout__shipnote {
+  margin: 0.6rem 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
 /* "Digital ticket — nothing ships" notice on pickup-only checkout. */
 .ccheckout__notice {
   margin: 0.85rem 0 0;

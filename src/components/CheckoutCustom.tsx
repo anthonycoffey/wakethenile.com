@@ -299,6 +299,7 @@ function CheckoutForm({
               </label>
             ))}
           </div>
+          <p className="ccheckout__shipnote">We currently ship within the US only — no international shipping.</p>
         </section>
       )}
 
