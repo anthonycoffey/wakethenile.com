@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { addItem, openCart } from '../lib/cart';
 import { formatPrice } from '../lib/format';
 import type { OptionGroup } from '../lib/bundleOptions';
@@ -41,19 +41,17 @@ export default function ProductPurchase({
   optionGroups = [],
 }: ProductPurchaseProps) {
   const hasVariants = variants.length > 0;
-  const firstAvailable = hasVariants
-    ? (variants.find((v) => v.stock > 0)?.sku ?? variants[0].sku)
-    : '';
-  const [sku, setSku] = useState(firstAvailable);
+  // Track the selected variant by index, not SKU — SKUs aren't guaranteed
+  // unique across variants, and matching on SKU would select/highlight every
+  // variant that shares one (e.g. an XL/XXL SKU collision).
+  const firstAvailableIdx = hasVariants ? Math.max(0, variants.findIndex((v) => v.stock > 0)) : 0;
+  const [selIdx, setSelIdx] = useState(firstAvailableIdx);
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   // Chosen option value per group name; starts empty so nothing is pre-picked.
   const [optionChoices, setOptionChoices] = useState<Record<string, string>>({});
 
-  const selected = useMemo(
-    () => variants.find((v) => v.sku === sku),
-    [variants, sku],
-  );
+  const selected = hasVariants ? variants[selIdx] : undefined;
 
   const unitPrice = hasVariants ? (selected?.price ?? basePrice ?? 0) : (basePrice ?? 0);
   // Stock is authoritative for both paths now; 0 = sold out.
@@ -64,8 +62,8 @@ export default function ProductPurchase({
   // A single unlabeled "One Size" variant reads better as a plain buy button.
   const showSizes = hasVariants && !(variants.length === 1 && /one size/i.test(variants[0].label));
 
-  function selectSku(next: string) {
-    setSku(next);
+  function selectVariant(idx: number) {
+    setSelIdx(idx);
     setQty(1);
     setAdded(false);
   }
@@ -84,7 +82,7 @@ export default function ProductPurchase({
       productId,
       slug,
       title,
-      sku: hasVariants ? sku : slug,
+      sku: hasVariants ? (selected?.sku ?? slug) : slug,
       variantLabel: selected?.label,
       unitPrice,
       qty: Math.min(qty, stock),
@@ -123,14 +121,14 @@ export default function ProductPurchase({
         <div>
           <span className="purchase__label">Size</span>
           <div className="purchase__sizes">
-            {variants.map((v) => (
+            {variants.map((v, idx) => (
               <button
-                key={v.sku}
+                key={idx}
                 type="button"
                 className="purchase__size"
-                aria-pressed={v.sku === sku}
+                aria-pressed={idx === selIdx}
                 disabled={v.stock <= 0}
-                onClick={() => selectSku(v.sku)}
+                onClick={() => selectVariant(idx)}
               >
                 {v.label}
               </button>
