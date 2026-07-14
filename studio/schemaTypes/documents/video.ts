@@ -51,10 +51,20 @@ export const video = defineType({
       description: 'Lower numbers appear first in the slider.',
       initialValue: 0,
     }),
+    defineField({
+      name: 'enabled',
+      title: 'Show in slider',
+      type: 'boolean',
+      description: 'Uncheck to hide from the /videos page without deleting it.',
+      initialValue: true,
+    }),
     defineField({name: 'relatedRelease', title: 'Related release', type: 'reference', to: [{type: 'release'}]}),
   ],
   orderings: [{title: 'Manual order', name: 'orderAsc', by: [{field: 'order', direction: 'asc'}]}],
   preview: {
-    select: {title: 'title', media: 'poster', subtitle: 'source'},
+    select: {title: 'title', media: 'poster', subtitle: 'source', enabled: 'enabled'},
+    prepare({title, media, subtitle, enabled}) {
+      return {title: enabled === false ? `${title} (hidden)` : title, media, subtitle}
+    },
   },
 })
