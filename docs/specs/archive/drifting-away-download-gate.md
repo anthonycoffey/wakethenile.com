@@ -1,6 +1,6 @@
 # Spec: "Drifting Away" download-gate landing page
 
-- **Status:** Active
+- **Status:** Shipped
 - **Date:** 2026-07-14
 
 ## Problem
