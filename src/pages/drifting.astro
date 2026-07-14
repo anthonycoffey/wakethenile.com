@@ -22,6 +22,15 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       <h1 class="drifting__title">Drifting Away</h1>
       <p class="drifting__sub">Drop your email below to unlock the download.</p>
 
+      <div class="drifting__player">
+        <audio class="drifting__audio" controls preload="none" src="/audio/drifting-away.mp3">
+          Your browser doesn't support inline audio.
+        </audio>
+        <a class="drifting__download" href="/audio/drifting-away.mp3" download="Drifting Away - Wake The Nile.mp3">
+          Download the track
+        </a>
+      </div>
+
       <div class="drifting__form">
         <script src="https://js-na2.hsforms.net/forms/embed/243317127.js" defer></script>
         <div
@@ -92,6 +101,39 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     margin: 0 0 1.5rem;
     font-size: clamp(1.1rem, 1rem + 0.5vw, 1.4rem);
   }
+  .drifting__player {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.9rem;
+    background: rgba(13, 13, 13, 0.75);
+    border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    backdrop-filter: blur(4px);
+  }
+  .drifting__audio {
+    width: 100%;
+  }
+  .drifting__download {
+    display: inline-block;
+    color: var(--accent-ink);
+    background: var(--accent);
+    border-radius: 100px;
+    text-transform: uppercase;
+    font-weight: 800;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    padding: 0.6em 1.4em;
+    text-decoration: none;
+    transition: opacity 0.2s ease;
+  }
+  .drifting__download:hover {
+    opacity: 0.85;
+  }
+
   .drifting__form {
     width: 100%;
     max-width: 480px;
