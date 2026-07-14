@@ -1,0 +1,127 @@
+---
+// New page: wakethenile.com/drifting
+// Download-gate landing page for the "Drifting Away" single. Full-bleed cover
+// art background (same stretched-cover treatment as the Music/Connect/Home
+// pages) with a HubSpot form on top. Submitting the form sends the user to a
+// HubSpot-hosted thank-you page with their download link (configured in
+// HubSpot, not here).
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Drifting Away"
+  description={'Get an exclusive early listen to our new single, "Drifting Away."'}
+  footer="scroll"
+>
+  <section class="drifting">
+    <div class="drifting__bg" style="background-image:url('/images/drifting-away-cover.jpg')" />
+    <div class="drifting__overlay" />
+
+    <div class="drifting__inner">
+      <p class="drifting__eyebrow">Exclusive Early Listen</p>
+      <h1 class="drifting__title">Drifting Away</h1>
+      <p class="drifting__sub">Drop your email below to unlock the download.</p>
+
+      <div class="drifting__form">
+        <script src="https://js-na2.hsforms.net/forms/embed/243317127.js" defer></script>
+        <div
+          class="hs-form-frame"
+          data-region="na2"
+          data-form-id="264f2cb7-1a10-4f93-86fc-8e3fedc53956"
+          data-portal-id="243317127"
+        >
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .drifting {
+    position: relative;
+    min-height: 100svh;
+    display: grid;
+    place-items: center;
+    padding: calc(8vh + 4.5rem) 1.25rem 3rem;
+  }
+  .drifting__bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    z-index: 0;
+  }
+  .drifting__overlay {
+    position: absolute;
+    inset: 0;
+    background: #000000;
+    opacity: 0.55;
+    z-index: 1;
+  }
+  .drifting__inner {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    text-align: center;
+    max-width: 640px;
+    margin-inline: auto;
+  }
+  .drifting__eyebrow {
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin: 0;
+  }
+  .drifting__title {
+    color: var(--accent);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    font-size: clamp(2.75rem, 2.25rem + 4vw, 4.5rem);
+    margin: 0;
+  }
+  .drifting__sub {
+    color: var(--accent);
+    font-weight: 600;
+    margin: 0 0 1.5rem;
+    font-size: clamp(1.1rem, 1rem + 0.5vw, 1.4rem);
+  }
+  .drifting__form {
+    width: 100%;
+    max-width: 480px;
+    background: rgba(13, 13, 13, 0.75);
+    border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+    border-radius: var(--radius);
+    padding: 1.75rem 1.5rem;
+    backdrop-filter: blur(4px);
+  }
+  .drifting__form :global(label) {
+    color: var(--text);
+  }
+  .drifting__form :global(input),
+  .drifting__form :global(textarea),
+  .drifting__form :global(select) {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.6rem 0.75rem;
+    width: 100%;
+  }
+  .drifting__form :global(.hs-button) {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: 0;
+    border-radius: var(--radius);
+    font-weight: 800;
+    padding: 0.7rem 1.25rem;
+    cursor: pointer;
+    width: 100%;
+  }
+</style>
