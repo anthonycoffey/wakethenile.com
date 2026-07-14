@@ -64,12 +64,16 @@ const NOT_HIDDEN = `!("hidden" in coalesce(tags, []))`;
 
 // Grid card: enough to render a tile + a derived "from" price and stock state.
 // Manual "Sort order" first (lower numbers lead); products without one fall
-// back to alphabetical after the ordered ones.
+// back to alphabetical after the ordered ones. "fromPrice" prefers the
+// variant minimum when variants exist (matching ProductPurchase.tsx, which
+// always prices off the selected variant) over the base price field, which
+// is otherwise just a fallback for products with no variants and can go
+// stale relative to the real per-size prices.
 export const allProductsQuery = `*[_type == "product" && ${NOT_DRAFT} && ${NOT_HIDDEN}] | order(coalesce(order, 999999) asc, title asc){
   _id, title, "slug": slug.current, images, price,
   "category": category->title, tags,
   variants[]${VARIANT},
-  "fromPrice": coalesce(price, math::min(variants[].price)),
+  "fromPrice": coalesce(math::min(variants[].price), price),
   "inStock": ${IN_STOCK}
 }`;
 
