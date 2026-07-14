@@ -1,0 +1,126 @@
+---
+// New page: wakethenile.com/drifting/download
+// Post-submit destination for the /drifting HubSpot form (set as the form's
+// follow-up redirect in HubSpot). Same full-bleed cover-art treatment as
+// /drifting, with the actual player + download button — the raw file at
+// /audio/drifting-away.mp3 has no page of its own, since a browser hitting
+// that URL directly just gets the audio bytes.
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Download — Drifting Away"
+  description={'Your download for "Drifting Away" by Wake the Nile.'}
+  footer="scroll"
+  seo={{ noIndex: true }}
+>
+  <section class="download">
+    <div class="download__bg" style="background-image:url('/images/drifting-away-cover.jpg')" />
+    <div class="download__overlay" />
+
+    <div class="download__inner">
+      <p class="download__eyebrow">Thanks for signing up</p>
+      <h1 class="download__title">Drifting Away</h1>
+      <p class="download__sub">Your exclusive early listen is ready.</p>
+
+      <div class="download__card">
+        <audio class="download__audio" controls preload="none" src="/audio/drifting-away.mp3">
+          Your browser doesn't support inline audio.
+        </audio>
+        <a class="download__btn" href="/audio/drifting-away.mp3" download="Drifting Away - Wake The Nile.mp3">
+          Download the track
+        </a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .download {
+    position: relative;
+    min-height: 100svh;
+    display: grid;
+    place-items: center;
+    padding: calc(8vh + 4.5rem) 1.25rem 3rem;
+  }
+  .download__bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    z-index: 0;
+  }
+  .download__overlay {
+    position: absolute;
+    inset: 0;
+    background: #000000;
+    opacity: 0.55;
+    z-index: 1;
+  }
+  .download__inner {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    text-align: center;
+    max-width: 640px;
+    margin-inline: auto;
+  }
+  .download__eyebrow {
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin: 0;
+  }
+  .download__title {
+    color: var(--accent);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    font-size: clamp(2.75rem, 2.25rem + 4vw, 4.5rem);
+    margin: 0;
+  }
+  .download__sub {
+    color: var(--accent);
+    font-weight: 600;
+    margin: 0 0 1.5rem;
+    font-size: clamp(1.1rem, 1rem + 0.5vw, 1.4rem);
+  }
+  .download__card {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.9rem;
+    background: rgba(13, 13, 13, 0.75);
+    border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+    border-radius: var(--radius);
+    padding: 1.75rem 1.5rem;
+    backdrop-filter: blur(4px);
+  }
+  .download__audio {
+    width: 100%;
+  }
+  .download__btn {
+    display: inline-block;
+    color: var(--accent-ink);
+    background: var(--accent);
+    border-radius: 100px;
+    text-transform: uppercase;
+    font-weight: 800;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    padding: 0.7em 1.6em;
+    text-decoration: none;
+    transition: opacity 0.2s ease;
+  }
+  .download__btn:hover {
+    opacity: 0.85;
+  }
+</style>
