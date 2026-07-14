@@ -25,7 +25,7 @@ to Stripe + Sanity.
    live check-in status, totals, and CSV export.
 
 ## Tiers
-- GA = Live Show Ticket (`2480f00d…`). VIP = Ultimate Fan Experience (`b351d11f…`). Ids mirrored in
+- GA = Live Show Ticket (`2480f00d…`). VIP = VIP Fan Experience (`b351d11f…`). Ids mirrored in
   `checkout.ts`, `stripe-webhook.ts`, `checkout-session.ts`.
 
 ## Config required (Cloudflare Production, server-only)
@@ -40,7 +40,7 @@ to Stripe + Sanity.
 ## Acceptance criteria
 1. Buying a Live Show Ticket → thank-you shows a QR; `/ticket?c=…` shows **GA** + admits; staff Check in stamps it;
    a second check-in says "already checked in".
-2. Buying the Ultimate Fan Experience → ticket shows **VIP**.
+2. Buying the VIP Fan Experience → ticket shows **VIP**.
 3. `/attendees` (with PIN) lists both, search works, CSV downloads; wrong PIN is rejected.
 4. Sanity `order` docs carry `ticketCode`/`ticketTier`/`admits`/`checkedInAt`; non-ticket (merch-only) orders carry
    none of these and show no QR.

@@ -29,7 +29,7 @@ export const order = defineType({
       type: 'string',
       readOnly: true,
       options: {list: ['ga', 'vip'], layout: 'radio'},
-      description: 'ga = Live Show Ticket, vip = Ultimate Fan Experience. Absent on merch-only orders.',
+      description: 'ga = Live Show Ticket, vip = VIP Fan Experience. Absent on merch-only orders.',
     }),
     defineField({name: 'admits', title: 'Admits (# people)', type: 'number', readOnly: true}),
     defineField({

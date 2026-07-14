@@ -9,7 +9,7 @@
 Both bundle products include a tee, but the customer can't say which one or what size, and fulfillment has no
 record of the choice:
 
-- **Ultimate Fan Experience** — `superfans`, id `b351d11f-4c78-4a1f-b36b-c10d951c96ea`, sold on `/superfans`.
+- **VIP Fan Experience** — `superfans`, id `b351d11f-4c78-4a1f-b36b-c10d951c96ea`, sold on `/superfans`.
 - **Ultimate Fan Merch Bundle** — `merch-bundle`, id `ca04e096-228b-4bee-a28b-46829ed68ecf`, sold on `/merch`.
 
 ## Requirements
@@ -51,5 +51,5 @@ Allowed values are defined once in `src/lib/bundleOptions.ts` (frontend) and mir
 - Bundle sales do not decrement standalone Obuntu/Champion tee stock.
 - The duplicate tee SKUs in Sanity (both tees use `TEE-CHMP-*`) are not addressed here.
 
-> Note: the `/superfans` bundle is now labeled **Ultimate Fan Experience** (title/slug/sku aligned to the CMS
+> Note: the `/superfans` bundle is now labeled **VIP Fan Experience** (title/slug/sku aligned to the CMS
 > product), resolving the earlier copy mismatch.

@@ -34,19 +34,12 @@ if (open) {
       <div id="upsell-modal" class="upsell-modal" hidden aria-hidden="true">
         <div class="upsell-modal__backdrop" data-upsell-close></div>
         <div class="upsell-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="upsell-title">
-          <span class="upsell-modal__badge">15% off · limited time</span>
+          <span class="upsell-modal__badge">15% off</span>
           <h2 id="upsell-title" class="upsell-modal__title">Your ticket’s in the cart 🎟️</h2>
           <p class="upsell-modal__body">
             Before you check out, take a look around our store — anything you buy can be
-            <strong>picked up at the show</strong>, no shipping wait. And for a very short time,
-            your order gets <strong>15% off, applied automatically at checkout.</strong>
-          </p>
-          <p
-            class="upsell-modal__countdown"
-            data-deadline="2026-07-17T23:59:00-05:00"
-            aria-live="polite"
-          >
-            &nbsp;
+            <strong>picked up at the show</strong>, no shipping wait. Your order also gets
+            <strong>15% off, applied automatically at checkout.</strong>
           </p>
           <div class="upsell-modal__actions">
             <button type="button" class="upsell-modal__btn upsell-modal__btn--primary" data-upsell-close>
@@ -78,9 +71,7 @@ if (open) {
     sessionStorage.removeItem(KEY);
     const modal = document.getElementById('upsell-modal');
     if (modal) {
-      let timer: number | undefined;
       const close = () => {
-        if (timer) window.clearInterval(timer);
         modal.hidden = true;
         modal.setAttribute('aria-hidden', 'true');
         document.body.style.overflow = '';
@@ -90,29 +81,6 @@ if (open) {
       modal.setAttribute('aria-hidden', 'false');
       document.body.style.overflow = 'hidden';
       modal.querySelector<HTMLButtonElement>('.upsell-modal__btn--primary')?.focus();
-
-      // Live countdown to the offer deadline (fixed instant, so it reads the
-      // same for every visitor regardless of their timezone).
-      const cd = modal.querySelector<HTMLElement>('[data-deadline]');
-      const deadline = cd?.dataset.deadline ? new Date(cd.dataset.deadline).getTime() : NaN;
-      if (cd && !Number.isNaN(deadline)) {
-        const pad = (n: number) => String(n).padStart(2, '0');
-        const tick = () => {
-          const ms = deadline - Date.now();
-          if (ms <= 0) {
-            cd.textContent = 'This offer has ended';
-            if (timer) window.clearInterval(timer);
-            return;
-          }
-          const s = Math.floor(ms / 1000);
-          const d = Math.floor(s / 86400);
-          const h = Math.floor((s % 86400) / 3600);
-          const m = Math.floor((s % 3600) / 60);
-          cd.textContent = `Offer ends in ${d}d ${pad(h)}h ${pad(m)}m ${pad(s % 60)}s`;
-        };
-        tick();
-        timer = window.setInterval(tick, 1000);
-      }
 
       // "Look around" (and the backdrop) collapse the modal onto the store.
       modal.querySelectorAll<HTMLElement>('[data-upsell-close]').forEach((el) => {
@@ -203,15 +171,6 @@ if (open) {
   .upsell-modal__body strong {
     color: var(--accent);
     font-weight: 700;
-  }
-  .upsell-modal__countdown {
-    font-variant-numeric: tabular-nums;
-    font-weight: 800;
-    font-size: 0.95rem;
-    letter-spacing: 0.4px;
-    color: var(--accent);
-    margin: 0 0 1.25rem;
-    min-height: 1.2em;
   }
   .upsell-modal__actions {
     display: flex;

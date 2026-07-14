@@ -11,6 +11,10 @@ import { getStoreStatus } from '../../lib/store';
 import { bundleOptionGroupsFor } from '../../lib/bundleOptions';
 import type { Product } from '../../lib/types';
 
+// Live Show Ticket — mirrors the id used across checkout/webhook. Its variant
+// selector reads "Tier" instead of "Size" (more tiers land later).
+const TICKET_PRODUCT_ID = '2480f00d-9317-4ed0-9406-bcef1e34bc71';
+
 export async function getStaticPaths() {
   const slugs = await sanityFetch<{ slug: string }[]>(allProductSlugsQuery, {}, []);
   return slugs.filter((s) => s.slug).map((s) => ({ params: { slug: s.slug } }));
@@ -83,6 +87,7 @@ const descriptionHtml = product ? renderPortableText(product.description) : '';
           baseStock={product.stock}
           variants={variants}
           optionGroups={bundleOptionGroupsFor(product._id)}
+          sizeLabel={product._id === TICKET_PRODUCT_ID ? 'Tier' : 'Size'}
         />
 
         {descriptionHtml && (

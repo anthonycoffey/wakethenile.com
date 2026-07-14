@@ -28,6 +28,8 @@ export interface ProductPurchaseProps {
    * `variants` — these don't affect price or stock. See ADR 0007.
    */
   optionGroups?: OptionGroup[];
+  /** Heading above the variant selector — "Size" for merch, "Tier" for tickets. */
+  sizeLabel?: string;
 }
 
 export default function ProductPurchase({
@@ -39,6 +41,7 @@ export default function ProductPurchase({
   baseStock,
   variants,
   optionGroups = [],
+  sizeLabel = 'Size',
 }: ProductPurchaseProps) {
   const hasVariants = variants.length > 0;
   // Track the selected variant by index, not SKU — SKUs aren't guaranteed
@@ -119,7 +122,7 @@ export default function ProductPurchase({
 
       {showSizes && (
         <div>
-          <span className="purchase__label">Size</span>
+          <span className="purchase__label">{sizeLabel}</span>
           <div className="purchase__sizes">
             {variants.map((v, idx) => (
               <button

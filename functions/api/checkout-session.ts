@@ -10,7 +10,7 @@ const STRIPE_VERSION = '2026-06-24.dahlia';
 // Admit-granting products (mirror functions/api/checkout.ts + stripe-webhook.ts).
 const TICKET_PRODUCT_IDS = new Set([
   '2480f00d-9317-4ed0-9406-bcef1e34bc71', // Live Show Ticket
-  'b351d11f-4c78-4a1f-b36b-c10d951c96ea', // Ultimate Fan Experience
+  'b351d11f-4c78-4a1f-b36b-c10d951c96ea', // VIP Fan Experience
 ]);
 
 interface Env {
