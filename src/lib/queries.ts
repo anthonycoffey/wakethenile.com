@@ -34,7 +34,7 @@ export const pageBySlugQuery = `*[_type == "page" && ${NOT_DRAFT} && slug.curren
 
 export const showsPageQuery = `*[_type == "page" && _id == "page-shows"][0]${PAGE}`;
 
-export const videosQuery = `*[_type == "video" && ${NOT_DRAFT}] | order(order asc){
+export const videosQuery = `*[_type == "video" && ${NOT_DRAFT} && enabled != false] | order(order asc){
   _id, title, source, streamId, videoUrl, poster, order
 }`;
 
