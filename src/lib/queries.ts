@@ -102,3 +102,8 @@ export const productsForCheckoutQuery = `*[_type == "product" && ${NOT_DRAFT} &&
   _id, title, price, stock, taxCode, "image": images[0],
   variants[]{ label, sku, price, stock }
 }`;
+
+// Another product's images, by id — used to compose the VIP Fan Experience
+// PDP hero (its own image + the Live Show Ticket's poster image), matching
+// the two-image "interlocked" visual on /superfans.
+export const productImagesByIdQuery = `*[_type == "product" && _id == $id][0]{ images }`;

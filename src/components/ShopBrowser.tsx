@@ -6,13 +6,20 @@ export interface BrowserProduct {
   slug: string;
   title: string;
   image?: string;
+  /**
+   * Optional second image rendered stacked behind `image` (smaller, top-left)
+   * — used only for the VIP Fan Experience tile, matching the two-image
+   * "interlocked" visual on /superfans (poster behind, its own image front).
+   */
+  backImage?: string;
   fromPrice?: number;
   inStock: boolean;
   category?: string;
   tags?: string[];
 }
 
-const PAGE_SIZE = 6;
+// 3x3 grid per page — the full current catalog (8 items) fits on one page.
+const PAGE_SIZE = 9;
 
 export default function ShopBrowser({ products }: { products: BrowserProduct[] }) {
   const categories = useMemo(() => {
@@ -150,7 +157,12 @@ export default function ShopBrowser({ products }: { products: BrowserProduct[] }
           {visible.map((p) => (
             <a key={p.id} className="shopb__card" href={`/merch/${p.slug}`}>
               <div className="shopb__media">
-                {p.image ? (
+                {p.backImage && p.image ? (
+                  <span className="shopb__imgstack">
+                    <img src={p.backImage} alt="" className="shopb__stackimg shopb__stackimg--back" />
+                    <img src={p.image} alt={p.title} className="shopb__stackimg shopb__stackimg--front" loading="lazy" />
+                  </span>
+                ) : p.image ? (
                   <img src={p.image} alt={p.title} loading="lazy" />
                 ) : (
                   <span className="shopb__ph" aria-hidden="true" />

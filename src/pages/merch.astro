@@ -11,15 +11,26 @@ import type { ProductCardData } from '../lib/types';
 
 const { open, settings } = await getStoreStatus();
 
+// VIP Fan Experience's tile reuses the two-image "interlocked" visual from
+// /superfans (its own image in front, the Live Show Ticket's poster behind).
+const TICKET_PRODUCT_ID = '2480f00d-9317-4ed0-9406-bcef1e34bc71';
+const EXPERIENCE_PRODUCT_ID = 'b351d11f-4c78-4a1f-b36b-c10d951c96ea';
+
 // Resolve image URLs server-side (the hydrated island has no Sanity creds).
 let items: BrowserProduct[] = [];
 if (open) {
   const products = await sanityFetch<ProductCardData[]>(allProductsQuery, {}, []);
+  // The ticket is already in this same catalog fetch (both are un-hidden).
+  const ticketPosterImg = urlForWidth(
+    products.find((p) => p._id === TICKET_PRODUCT_ID)?.images?.[0],
+    800,
+  );
   items = products.map((p) => ({
     id: p._id,
     slug: p.slug ?? '',
     title: p.title ?? '',
     image: urlForWidth(p.images?.[0], 800) ?? undefined,
+    backImage: p._id === EXPERIENCE_PRODUCT_ID ? (ticketPosterImg ?? undefined) : undefined,
     fromPrice: p.fromPrice,
     inStock: p.inStock !== false,
     category: p.category,

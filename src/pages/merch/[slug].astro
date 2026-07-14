@@ -4,7 +4,11 @@ import ProductPurchase from '../../components/ProductPurchase.tsx';
 import type { PurchaseVariant } from '../../components/ProductPurchase.tsx';
 import StoreClosed from '../../components/StoreClosed.astro';
 import { sanityFetch } from '../../lib/sanity';
-import { allProductSlugsQuery, productBySlugQuery } from '../../lib/queries';
+import {
+  allProductSlugsQuery,
+  productBySlugQuery,
+  productImagesByIdQuery,
+} from '../../lib/queries';
 import { urlForWidth } from '../../lib/sanityImage';
 import { renderPortableText } from '../../lib/portableText';
 import { getStoreStatus } from '../../lib/store';
@@ -14,6 +18,9 @@ import type { Product } from '../../lib/types';
 // Live Show Ticket — mirrors the id used across checkout/webhook. Its variant
 // selector reads "Tier" instead of "Size" (more tiers land later).
 const TICKET_PRODUCT_ID = '2480f00d-9317-4ed0-9406-bcef1e34bc71';
+// VIP Fan Experience — its hero reuses the same two-image "interlocked"
+// visual as /superfans (its own image in front, the ticket's poster behind).
+const EXPERIENCE_PRODUCT_ID = 'b351d11f-4c78-4a1f-b36b-c10d951c96ea';
 
 export async function getStaticPaths() {
   const slugs = await sanityFetch<{ slug: string }[]>(allProductSlugsQuery, {}, []);
@@ -39,6 +46,22 @@ const gallery = product
       .filter((u): u is string => !!u)
   : [];
 
+// VIP Fan Experience only: fetch the ticket's poster image to recreate the
+// same stacked "interlocked" hero used on /superfans.
+const isExperience = product?._id === EXPERIENCE_PRODUCT_ID;
+const posterImg = isExperience
+  ? urlForWidth(
+      (
+        await sanityFetch<{ images?: unknown[] } | null>(
+          productImagesByIdQuery,
+          { id: TICKET_PRODUCT_ID },
+          null,
+        )
+      )?.images?.[0],
+      1000,
+    )
+  : null;
+
 const variants: PurchaseVariant[] = product
   ? (product.variants ?? []).map((v) => ({
       label: v.label ?? '',
@@ -58,7 +81,12 @@ const descriptionHtml = product ? renderPortableText(product.description) : '';
 
     <div class="pdp__grid">
       <div class="pdp__gallery">
-        {gallery.length > 0 ? (
+        {isExperience && posterImg && gallery[0] ? (
+          <span class="pdp__imgstack">
+            <img class="pdp__stackimg pdp__stackimg--back" src={posterImg} alt="Album Release Show Poster" />
+            <img class="pdp__stackimg pdp__stackimg--front" src={gallery[0]} alt={product.title} />
+          </span>
+        ) : gallery.length > 0 ? (
           <>
             <img class="pdp__main" src={gallery[0]} alt={product.title} loading="eager" />
             {gallery.length > 1 && (
@@ -152,6 +180,31 @@ const descriptionHtml = product ? renderPortableText(product.description) : '';
     object-fit: cover;
     background: #111;
     cursor: pointer;
+  }
+  /* VIP Fan Experience hero — the same two-image "interlocked" visual used
+     on /superfans (poster behind top-left, its own image front bottom-right). */
+  .pdp__imgstack {
+    position: relative;
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 5;
+  }
+  .pdp__stackimg {
+    position: absolute;
+    width: 60%;
+    height: 60%;
+    object-fit: cover;
+    border-radius: calc(var(--radius) - 2px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+  }
+  .pdp__stackimg--back {
+    top: 0;
+    left: 0;
+  }
+  .pdp__stackimg--front {
+    bottom: 0;
+    right: 0;
+    border: 3px solid var(--bg);
   }
   .pdp__info {
     position: sticky;

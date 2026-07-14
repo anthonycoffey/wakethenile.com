@@ -591,8 +591,8 @@
   color: var(--accent);
 }
 
-/* Product grid: 1 / 2 / 3 per row (mobile / tablet / desktop) so a 6-per-page
-   grid always breaks into even rows. */
+/* Product grid: 1 / 2 / 3 per row (mobile / tablet / desktop) so a 9-per-page
+   grid forms a clean 3x3 at desktop width. */
 .shopb__grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -632,6 +632,37 @@
   transition: transform 0.5s ease;
 }
 .shopb__card:hover .shopb__media img {
+  transform: scale(1.05);
+}
+/* Two-image "interlocked" tile — VIP Fan Experience only, matching the
+   /superfans visual (poster behind top-left, its own image front bottom-right).
+   Selectors are qualified with .shopb__media so they out-specificity the
+   generic ".shopb__media img { width/height: 100% }" rule above. */
+.shopb__imgstack {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.shopb__media .shopb__stackimg {
+  position: absolute;
+  width: 62%;
+  height: 62%;
+  object-fit: cover;
+  border-radius: 4px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+  transition: transform 0.5s ease;
+}
+.shopb__stackimg--back {
+  top: 0;
+  left: 0;
+}
+.shopb__stackimg--front {
+  bottom: 0;
+  right: 0;
+  border: 2px solid var(--bg);
+}
+.shopb__card:hover .shopb__media .shopb__stackimg {
   transform: scale(1.05);
 }
 .shopb__ph {
