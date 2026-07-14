@@ -11,7 +11,7 @@ inside the shipping-address block. Separately, merch shipping is a single flat r
 **region-based** rates (Lower-48 $9, AK/HI $13, US-only, free show-pickup for ticket/bundle buyers).
 
 ## Stage 1 — Ticket-only checkout (this PR)
-A cart where **every** line is a pickup product (Live Show Ticket `2480f00d…` or Ultimate Fan Experience
+A cart where **every** line is a pickup product (Live Show Ticket `2480f00d…` or VIP Fan Experience
 `b351d11f…`) is "pickup-only":
 - `functions/api/checkout.ts`: for pickup-only carts, omit `shipping_address_collection` **and**
   `shipping_options` (no address, no shipping cost).

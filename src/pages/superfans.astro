@@ -1,8 +1,8 @@
 ---
 // New page: wakethenile.com/superfans
 // Presale landing page for the first live show (Sep 19 @ Maggie Mae's Upstairs).
-// Two options: the Ultimate Fan Experience (ticket + merch bundle + VIP) or a
-// standalone ticket.
+// Two options: the VIP Fan Experience (ticket + merch bundle + VIP) or a
+// standalone Early Bird ticket.
 //  - Bundle: adds to cart and goes straight to /checkout (no merch browsing).
 //  - Ticket only: adds to cart and goes to /merch, with a temporary banner
 //    inviting them to grab anything else before checking out.
@@ -50,8 +50,28 @@ const bundleOptionGroups = bundleOptionGroupsFor(BUNDLE_PRODUCT_ID) ?? [];
   <section class="superfans">
     <p class="superfans__eyebrow">Our First Live Show</p>
     <h1 class="superfans__title">September 19 — Maggie Mae's Upstairs</h1>
-    <p class="superfans__sub">Pick your option below. The first 100 tickets are $25 — price rises to $35 after that.</p>
+    <p class="superfans__sub">Pick your option below. Early Bird tickets are $30 — additional tiers coming soon.</p>
     <p class="superfans__note">Any merch you get with either option can be picked up at our Merch booth on show night — no shipping wait.</p>
+
+    <div id="promo-modal" class="upsell-modal" hidden aria-hidden="true">
+      <div class="upsell-modal__backdrop" data-promo-close></div>
+      <div class="upsell-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="promo-title">
+        <span class="upsell-modal__badge">15% off your order</span>
+        <h2 id="promo-title" class="upsell-modal__title">Don't forget your discount!</h2>
+        <p class="upsell-modal__body">
+          Enter code <strong>WTN15OFF</strong> at checkout to save 15% — on tickets, the VIP Experience,
+          and merch alike.
+        </p>
+        <div class="upsell-modal__actions">
+          <button type="button" class="upsell-modal__btn upsell-modal__btn--primary" id="promo-copy">
+            Copy code
+          </button>
+          <button type="button" class="upsell-modal__btn upsell-modal__btn--ghost" data-promo-close>
+            Got it, thanks!
+          </button>
+        </div>
+      </div>
+    </div>
 
     <div class="superfans__cards">
       <div class="superfans__card superfans__card--bundle">
@@ -59,8 +79,8 @@ const bundleOptionGroups = bundleOptionGroupsFor(BUNDLE_PRODUCT_ID) ?? [];
           {posterImg && <img src={posterImg} alt="Album Release Show Poster" class="superfans__img superfans__img--back" />}
           {bundleImg && <img src={bundleImg} alt="Ultimate Fan Merch Bundle" class="superfans__img superfans__img--front" />}
         </span>
-        <h2 class="superfans__name">Ultimate Fan Experience</h2>
-        <p class="superfans__price">$100</p>
+        <h2 class="superfans__name">VIP Fan Experience</h2>
+        <p class="superfans__price">$120</p>
         <p class="superfans__desc">Show ticket + Ultimate Fan Merch Bundle + VIP area access</p>
 
         <div class="superfans__options">
@@ -88,8 +108,8 @@ const bundleOptionGroups = bundleOptionGroupsFor(BUNDLE_PRODUCT_ID) ?? [];
           {posterImg && <img src={posterImg} alt="Album Release Show Poster" class="superfans__img" />}
         </span>
         <h2 class="superfans__name">Live Show Ticket</h2>
-        <p class="superfans__price">$25</p>
-        <p class="superfans__desc">General admission to the show</p>
+        <p class="superfans__price">$30</p>
+        <p class="superfans__desc">General admission — Early Bird pricing</p>
         <span class="superfans__cta">Add to Cart →</span>
       </button>
     </div>
@@ -115,8 +135,8 @@ const bundleOptionGroups = bundleOptionGroupsFor(BUNDLE_PRODUCT_ID) ?? [];
       slug: 'live-show-ticket',
       title: 'Live Show Ticket',
       sku: 'TICKET-EARLYBIRD',
-      variantLabel: 'Early Bird (First 100)',
-      unitPrice: 25,
+      variantLabel: 'Early Bird',
+      unitPrice: 30,
       qty: 1,
       image: cardImage(ticketCard),
     });
@@ -163,9 +183,9 @@ const bundleOptionGroups = bundleOptionGroupsFor(BUNDLE_PRODUCT_ID) ?? [];
       addItem({
         productId: BUNDLE_PRODUCT_ID,
         slug: 'superfans',
-        title: 'Ultimate Fan Experience',
+        title: 'VIP Fan Experience',
         sku: 'superfans',
-        unitPrice: 100,
+        unitPrice: 120,
         qty: 1,
         image: cardImage(bundleCard),
         options,
@@ -173,6 +193,47 @@ const bundleOptionGroups = bundleOptionGroupsFor(BUNDLE_PRODUCT_ID) ?? [];
       // Bundle buyers skip merch browsing entirely — straight to checkout.
       window.location.href = '/checkout';
     });
+  }
+
+  // Promo reminder — shown once per session immediately on landing (not
+  // gated behind either purchase path), since only the ticket-only flow
+  // auto-applies the code; VIP Experience buyers need to enter it manually.
+  const PROMO_SEEN_KEY = 'wtn_promo_seen';
+  if (!sessionStorage.getItem(PROMO_SEEN_KEY)) {
+    sessionStorage.setItem(PROMO_SEEN_KEY, '1');
+    const promoModal = document.getElementById('promo-modal');
+    if (promoModal) {
+      const closePromo = () => {
+        promoModal.hidden = true;
+        promoModal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+      };
+      promoModal.hidden = false;
+      promoModal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+      promoModal.querySelector<HTMLButtonElement>('.upsell-modal__btn--primary')?.focus();
+
+      promoModal.querySelectorAll<HTMLElement>('[data-promo-close]').forEach((el) => {
+        el.addEventListener('click', closePromo);
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !promoModal.hidden) closePromo();
+      });
+
+      const copyBtn = document.getElementById('promo-copy');
+      copyBtn?.addEventListener('click', async () => {
+        const original = copyBtn.textContent;
+        try {
+          await navigator.clipboard.writeText('WTN15OFF');
+          copyBtn.textContent = 'Copied ✓';
+        } catch {
+          copyBtn.textContent = 'WTN15OFF';
+        }
+        window.setTimeout(() => {
+          copyBtn.textContent = original;
+        }, 1800);
+      });
+    }
   }
 </script>
 
@@ -380,5 +441,110 @@ const bundleOptionGroups = bundleOptionGroupsFor(BUNDLE_PRODUCT_ID) ?? [];
   .superfans__cta--btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  /* Promo reminder modal — same visual style as the /merch ticket-only
+     upsell modal (centered card over a dimmed page). */
+  .upsell-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+  }
+  .upsell-modal[hidden] {
+    display: none;
+  }
+  .upsell-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.72);
+    animation: wtnFadeIn 0.25s ease;
+  }
+  .upsell-modal__dialog {
+    position: relative;
+    z-index: 1;
+    width: min(30rem, 100%);
+    background: #0d0d0d;
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 2rem 1.75rem;
+    text-align: center;
+    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.6);
+    animation: wtnPopIn 0.28s cubic-bezier(0.2, 0.8, 0.3, 1.2);
+  }
+  .upsell-modal__badge {
+    display: inline-block;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding: 0.35em 0.9em;
+    border-radius: 100px;
+    margin-bottom: 1rem;
+  }
+  .upsell-modal__title {
+    color: var(--accent);
+    font-size: 1.5rem;
+    margin: 0 0 0.75rem;
+  }
+  .upsell-modal__body {
+    color: var(--muted);
+    font-size: 0.92rem;
+    line-height: 1.6;
+    margin: 0 0 1.75rem;
+  }
+  .upsell-modal__body strong {
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .upsell-modal__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .upsell-modal__btn {
+    width: 100%;
+    padding: 0.85em 1.4em;
+    border-radius: 100px;
+    font-family: inherit;
+    font-weight: 800;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  }
+  .upsell-modal__btn--primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: 2px solid var(--accent);
+  }
+  .upsell-modal__btn--primary:hover {
+    background: transparent;
+    color: var(--accent);
+  }
+  .upsell-modal__btn--ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 2px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+  .upsell-modal__btn--ghost:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  @keyframes wtnPopIn {
+    from {
+      opacity: 0;
+      transform: translateY(12px) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
   }
 </style>

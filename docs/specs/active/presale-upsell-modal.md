@@ -16,10 +16,15 @@ at the show) and a real, time-limited **15% off** incentive that applies without
    - `wtn_upsell_msg` — triggers the modal.
    - `wtn_promo = "WTN15OFF"` — the promo to auto-apply at checkout.
 2. `/merch` shows a **centered modal over a dimmed store** (replaces the toast) with:
-   - copy: browse the store, everything is picked up at the show, 15% off applied automatically, limited time;
+   - copy: browse the store, everything is picked up at the show, 15% off applied automatically;
    - **"Look around the store"** (and backdrop / Esc) → closes the modal onto the store to browse;
    - **"No thanks — go to checkout"** → navigates to `/checkout`.
-3. `/checkout` (`CheckoutCustom.tsx`) reads `wtn_promo` and, once the Payment Element is ready, calls
+3. `/superfans` **also** shows a lighter reminder modal, in the same visual style, immediately on landing
+   (once per session, gated on `wtn_promo_seen`) — **regardless of which card the customer eventually picks**.
+   This exists because only the ticket-only path auto-applies the code; a **VIP Fan Experience** purchase does
+   not (see Notes), so the reminder tells the customer the code (`WTN15OFF`) up front with a "Copy code" button,
+   in case they need to enter it manually at checkout.
+4. `/checkout` (`CheckoutCustom.tsx`) reads `wtn_promo` and, once the Payment Element is ready, calls
    `applyPromotionCode()` automatically, shows it as applied, and clears the flag. The code lives only in
    `/superfans`; checkout applies whatever was armed. Because Stripe's `applyPromotionCode()` can spuriously
    return "invalid" if called the instant the Payment Element reports ready, the auto-apply **retries with
@@ -35,17 +40,19 @@ America/Chicago** (`expires_at` set on the code, matching the modal countdown). 
 session (Stripe percent-off coupon). Note: Stripe locks a promotion code's `expires_at` at creation — this expiry
 was set by archiving the original code and recreating `WTN15OFF` with the deadline baked in.
 
-## Countdown
+## Countdown (removed for now)
 
-The modal shows a live countdown to a fixed deadline: **Fri 2026-07-17 23:59 America/Chicago**
-(`2026-07-17T23:59:00-05:00`), set via the `data-deadline` attribute on `.upsell-modal__countdown` in
-`src/pages/merch.astro`. It's a fixed instant, so every visitor sees the same remaining time. At zero it reads
-"This offer has ended".
+The `/merch` modal previously showed a live countdown to a fixed deadline (2026-07-17 23:59 America/Chicago).
+**Removed for now** at the owner's request — the modal no longer displays a timer. **The underlying Stripe
+promotion code (`WTN15OFF`) still has that `expires_at` set** (a code's expiry can't be edited after creation —
+only archived + recreated), so the code will stop working at that instant with no on-screen countdown warning
+anyone. Revisit before that date: either extend the code's expiry (archive + recreate) or reinstate the
+countdown once a final promotion window is decided.
 
 ## Notes / trade-offs
 
 - The offer is armed on arrival, so it also applies if the customer skips browsing and checks out with just the
   ticket (15% off the ticket). Acceptable as goodwill; revisit if it should be gated to "Look around" only.
-- The countdown deadline and the Stripe code's `expires_at` are aligned (both 2026-07-17 23:59 America/Chicago),
-  so the offer stops in Stripe exactly when the timer hits zero. Change both together if the deadline ever moves
-  (a code's expiry can't be edited — archive + recreate).
+- The `/superfans` reminder modal does **not** arm `wtn_promo` — it's informational only. A **VIP Fan Experience**
+  purchase still does not auto-apply the code (only the ticket-only → `/merch` path does); the customer must type
+  `WTN15OFF` manually at checkout. Confirmed acceptable by the owner as long as the code is surfaced up front.

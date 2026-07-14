@@ -12,9 +12,9 @@ const STRIPE_VERSION = '2026-06-24.dahlia';
 
 // Admit-granting products for the Sep 19 show. Mirrors the ids in
 // functions/api/checkout.ts (PICKUP_ELIGIBLE_PRODUCT_IDS) — keep in sync if
-// these products are ever recreated. VIP = the Ultimate Fan Experience bundle.
+// these products are ever recreated. VIP = the VIP Fan Experience bundle.
 const TICKET_PRODUCT_ID = '2480f00d-9317-4ed0-9406-bcef1e34bc71'; // Live Show Ticket → GA
-const VIP_PRODUCT_ID = 'b351d11f-4c78-4a1f-b36b-c10d951c96ea'; // Ultimate Fan Experience → VIP
+const VIP_PRODUCT_ID = 'b351d11f-4c78-4a1f-b36b-c10d951c96ea'; // VIP Fan Experience → VIP
 // HubSpot contact property that flags a Sep 19 attendee (value "GA"/"VIP").
 const HUBSPOT_TICKET_PROPERTY = 'wtn_show_2026_09_19';
 

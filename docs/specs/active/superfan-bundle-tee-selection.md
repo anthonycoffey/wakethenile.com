@@ -9,7 +9,7 @@
 Both bundle products include a tee, but the customer can't say which one or what size, and fulfillment has no
 record of the choice:
 
-- **Ultimate Fan Experience** — `superfans`, id `b351d11f-4c78-4a1f-b36b-c10d951c96ea`, sold on `/superfans`.
+- **VIP Fan Experience** — `superfans`, id `b351d11f-4c78-4a1f-b36b-c10d951c96ea`, sold on `/superfans`.
 - **Ultimate Fan Merch Bundle** — `merch-bundle`, id `ca04e096-228b-4bee-a28b-46829ed68ecf`, sold on `/merch`.
 
 ## Requirements
@@ -49,7 +49,13 @@ Allowed values are defined once in `src/lib/bundleOptions.ts` (frontend) and mir
 ## Out of scope
 
 - Bundle sales do not decrement standalone Obuntu/Champion tee stock.
-- The duplicate tee SKUs in Sanity (both tees use `TEE-CHMP-*`) are not addressed here.
 
-> Note: the `/superfans` bundle is now labeled **Ultimate Fan Experience** (title/slug/sku aligned to the CMS
-> product), resolving the earlier copy mismatch.
+> Note: the `/superfans` bundle is now labeled **VIP Fan Experience** (title/slug/sku aligned to the CMS
+> product), resolving the earlier copy mismatch. Tee SKUs were later fixed to unique per-size values
+> (`OBUNTU-*` / `CHMP-*`) — see the size-selector fix PR.
+>
+> Note: the VIP Fan Experience product's own `images[0]` was a duplicate of the Live Show Ticket's poster
+> image (a data mistake) — its real "merch bundle contents" photo was sitting in `images[1]`. Corrected in
+> Sanity so `images[0]` is the real photo. The poster itself is now sourced separately from the ticket
+> product to compose the two-image "interlocked" visual — see `src/pages/merch/[slug].astro` and
+> `src/pages/merch.astro`.

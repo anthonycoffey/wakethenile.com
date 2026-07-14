@@ -18,7 +18,7 @@ const STRIPE_VERSION = '2026-06-24.dahlia';
 // if those products are ever recreated with new IDs.
 const PICKUP_ELIGIBLE_PRODUCT_IDS = new Set([
   '2480f00d-9317-4ed0-9406-bcef1e34bc71', // Live Show Ticket
-  'b351d11f-4c78-4a1f-b36b-c10d951c96ea', // Ultimate Fan Experience (superfan bundle)
+  'b351d11f-4c78-4a1f-b36b-c10d951c96ea', // VIP Fan Experience (superfan bundle)
 ]);
 
 // Required tee/size selections for the bundle products. MIRRORS
@@ -36,7 +36,7 @@ const BUNDLE_TWO_TEES = [
   { name: 'Size #2', values: SIZES },
 ];
 const BUNDLE_OPTION_ALLOW: Record<string, { name: string; values: string[] }[]> = {
-  'b351d11f-4c78-4a1f-b36b-c10d951c96ea': BUNDLE_TWO_TEES, // Ultimate Fan Experience
+  'b351d11f-4c78-4a1f-b36b-c10d951c96ea': BUNDLE_TWO_TEES, // VIP Fan Experience
   'ca04e096-228b-4bee-a28b-46829ed68ecf': BUNDLE_TWO_TEES, // Ultimate Fan Merch Bundle
 };
 

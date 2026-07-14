@@ -35,7 +35,7 @@ const TWO_TEES: OptionGroup[] = [
 ];
 
 export const BUNDLE_OPTION_GROUPS: Record<string, OptionGroup[]> = {
-  // Ultimate Fan Experience (sold on /superfans)
+  // VIP Fan Experience (sold on /superfans)
   'b351d11f-4c78-4a1f-b36b-c10d951c96ea': TWO_TEES,
   // Ultimate Fan Merch Bundle (sold on /merch/merch-bundle)
   'ca04e096-228b-4bee-a28b-46829ed68ecf': TWO_TEES,
