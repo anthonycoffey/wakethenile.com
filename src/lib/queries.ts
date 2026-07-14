@@ -69,7 +69,12 @@ export const allProductsQuery = `*[_type == "product" && ${NOT_DRAFT} && ${NOT_H
   _id, title, "slug": slug.current, images, price,
   "category": category->title, tags,
   variants[]${VARIANT},
-  "fromPrice": coalesce(price, math::min(variants[].price)),
+  // Variant price wins when variants exist (matches ProductPurchase.tsx,
+  // which always prices off the selected variant) — `price` is the base/
+  // fallback field for products with no variants, and can otherwise go
+  // stale relative to the real per-size prices, which caused the grid tile
+  // and the product page to disagree.
+  "fromPrice": coalesce(math::min(variants[].price), price),
   "inStock": ${IN_STOCK}
 }`;
 
