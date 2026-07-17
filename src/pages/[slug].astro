@@ -7,7 +7,7 @@ import type { Page } from '../lib/types';
 
 export async function getStaticPaths() {
   // Slugs with dedicated route files — never render them via this catch-all.
-  const RESERVED = new Set(['videos', 'shows', 'contact-us', 'lamb']);
+  const RESERVED = new Set(['videos', 'shows', 'contact-us', 'lamb', 'music']);
   const slugs = await sanityFetch<Array<{ slug: string }>>(allPageSlugsQuery, {}, []);
   return slugs
     .map((s) => s.slug)
