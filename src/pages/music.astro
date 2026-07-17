@@ -66,21 +66,20 @@ const tracks: Track[] = [
 <style>
   .music {
     position: relative;
+    min-height: 100svh;
     padding-bottom: 4rem;
   }
   .music__bg {
     position: absolute;
     inset: 0;
-    height: 60vh;
     background-image: var(--cover-bg);
     background-size: cover;
-    background-position: center 15%;
+    background-position: center;
     z-index: 0;
   }
   .music__overlay {
     position: absolute;
     inset: 0;
-    height: 60vh;
     z-index: 1;
   }
   .music__content {
