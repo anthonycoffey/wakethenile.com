@@ -34,14 +34,17 @@ const tracks: Track[] = [
 ---
 
 <BaseLayout title="Music" description="Listen to music from Wake the Nile." footer="scroll">
-  <section class="music" style={bg ? `--cover-bg: url('${bg}')` : undefined}>
-    {bg && <div class="music__bg" />}
-    {bg && overlayOn && (
-      <div class="music__overlay" style={`background:${overlayColor}; opacity:${overlayOpacity}`} />
+  <section class="music">
+    {bg && (
+      <div class="music__hero">
+        <img class="music__hero-img" src={bg} alt="" />
+        {overlayOn && (
+          <div class="music__overlay" style={`background:${overlayColor}; opacity:${overlayOpacity}`} />
+        )}
+        <div class="music__hero-fade" />
+      </div>
     )}
     <div class="music__content">
-      <h1 class="music__title">Music</h1>
-
       <ul class="tracklist">
         {tracks.map((track) => (
           <li class="track">
@@ -66,37 +69,39 @@ const tracks: Track[] = [
 <style>
   .music {
     position: relative;
-    min-height: 100svh;
     padding-bottom: 4rem;
   }
-  .music__bg {
-    position: absolute;
-    inset: 0;
-    background-image: var(--cover-bg);
-    background-size: cover;
-    background-position: center;
-    z-index: 0;
+  .music__hero {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+  }
+  .music__hero-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
   }
   .music__overlay {
     position: absolute;
     inset: 0;
     z-index: 1;
   }
+  .music__hero-fade {
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 35%;
+    background: linear-gradient(to bottom, transparent, var(--bg));
+    z-index: 2;
+  }
   .music__content {
     position: relative;
-    z-index: 2;
     max-width: 720px;
     margin-inline: auto;
-    padding: calc(14vh + 2rem) 1.25rem 2rem;
+    padding: 2.5rem 1.25rem 2rem;
     text-align: center;
-  }
-  .music__title {
-    color: var(--accent);
-    font-weight: 700;
-    text-transform: uppercase;
-    line-height: 1;
-    font-size: clamp(3rem, 2.5rem + 3vw, 4.5rem);
-    margin: 0 0 3rem;
   }
 
   .tracklist {
