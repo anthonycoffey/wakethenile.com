@@ -23,11 +23,13 @@ const shows = [...upcoming, ...past];
 }
 
 <style>
+  /* No box — just a wide column with a top rule; each row draws its own
+     bottom divider (see ShowCard), so entries read as a plain list. */
   .showlist-wrapper {
-    border: 1px solid var(--accent);
-    padding: 0 3rem 3rem;
-    max-width: 640px;
+    border-top: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    max-width: 1200px;
     margin: 0 auto;
+    padding: 0 1.5rem;
   }
   .showlist-wrapper ul {
     list-style: none;
@@ -37,10 +39,5 @@ const shows = [...upcoming, ...past];
   .showlist-empty {
     text-align: center;
     color: var(--muted);
-  }
-  @media (max-width: 600px) {
-    .showlist-wrapper {
-      padding: 0 1.25rem 2rem;
-    }
   }
 </style>

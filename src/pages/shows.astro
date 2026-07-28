@@ -20,48 +20,57 @@ const overlayOpacity = typeof ov?.opacity === 'number' ? ov.opacity : 0.5;
 ---
 
 <BaseLayout title="Shows" description="Tour dates and live shows." footer="scroll">
-  <section class="shows" style={bg ? `--cover-bg: url('${bg}')` : undefined}>
-    {bg && <div class="shows__bg" />}
+  <!-- Fixed-height hero (not a full-page fixed backdrop) so the list below
+       sits in plain black instead of overlaid on the photo. -->
+  <section class="shows-hero" style={bg ? `--cover-bg: url('${bg}')` : undefined}>
+    {bg && <div class="shows-hero__bg" />}
     {bg && overlayOn && (
-      <div class="shows__overlay" style={`background:${overlayColor}; opacity:${overlayOpacity}`} />
+      <div class="shows-hero__overlay" style={`background:${overlayColor}; opacity:${overlayOpacity}`} />
     )}
-    <div class="shows__content">
-      <h1 class="shows__title">Shows</h1>
-      <ShowList upcoming={upcoming} past={past} />
-    </div>
+    <h1 class="shows-hero__title">Shows</h1>
+  </section>
+  <section class="shows-list">
+    <ShowList upcoming={upcoming} past={past} />
   </section>
 </BaseLayout>
 
 <style>
-  .shows {
+  .shows-hero {
     position: relative;
-    min-height: 100svh;
-    padding-bottom: 4rem;
+    min-height: 65vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
-  .shows__bg {
-    position: fixed;
+  .shows-hero__bg {
+    position: absolute;
     inset: 0;
     background-image: var(--cover-bg);
     background-size: cover;
     background-position: center;
     z-index: -2;
   }
-  .shows__overlay {
-    position: fixed;
+  .shows-hero__overlay {
+    position: absolute;
     inset: 0;
     z-index: -1;
   }
-  .shows__content {
+  .shows-hero__title {
     position: relative;
     z-index: 1;
-    /* Sit ~100px higher than before while still letting the cover breathe. */
-    padding: calc(40vh - 100px) 1.25rem 2rem;
-  }
-  .shows__title {
     text-align: center;
     color: var(--accent);
     font-size: clamp(3.5rem, 3rem + 4vw, 5.5rem);
-    margin-bottom: 1.5rem;
     letter-spacing: -0.02em;
+    margin: 0;
+  }
+  .shows-list {
+    background: var(--bg);
+    padding: 2.5rem 1.25rem 5rem;
+  }
+  @media (max-width: 640px) {
+    .shows-hero {
+      min-height: 45vh;
+    }
   }
 </style>
