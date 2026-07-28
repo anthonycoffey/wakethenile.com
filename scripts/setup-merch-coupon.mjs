@@ -145,7 +145,7 @@ async function main() {
   const existing = await stripe('GET', `promotion_codes?code=${PROMO_CODE}&active=true&limit=10`);
   for (const code of existing.data ?? []) {
     await stripe('POST', `promotion_codes/${code.id}`, { active: 'false' });
-    console.log(`Deactivated old promotion code ${code.id} (coupon ${code.coupon}).`);
+    console.log(`Deactivated old promotion code ${code.id}.`);
   }
 
   const couponParams = {
@@ -159,7 +159,13 @@ async function main() {
   const coupon = await stripe('POST', 'coupons', couponParams);
   console.log(`Created coupon ${coupon.id}: ${PERCENT_OFF}% off, restricted to ${eligibleProductIds.length} products.`);
 
-  const promo = await stripe('POST', 'promotion_codes', { coupon: coupon.id, code: PROMO_CODE });
+  // Current API: a promotion code points at a `promotion` object rather than
+  // a flat `coupon` field (older docs/examples still show the flat form).
+  const promo = await stripe('POST', 'promotion_codes', {
+    'promotion[type]': 'coupon',
+    'promotion[coupon]': coupon.id,
+    code: PROMO_CODE,
+  });
   console.log(`Created promotion code ${promo.id} ("${PROMO_CODE}") → coupon ${coupon.id}.`);
 
   console.log('\nDone. WTN15OFF now only discounts synced merch line items.');
