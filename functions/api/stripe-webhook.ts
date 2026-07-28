@@ -350,7 +350,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
     const closingHtml = hasShippableMerch
       ? `<p>We’ll email you again when it ships.</p>`
       : isTicketOrder
-        ? `<p>See you on September 19 at Maggie Mae’s Upstairs! 🎶</p>`
+        ? `<p>See you on September 19 at Dwell Coworking Manchaca Auditorium! 🎶</p>`
         : '';
     // Ticket buyers get a prominent link to their scannable pass.
     const origin = new URL(context.request.url).origin;

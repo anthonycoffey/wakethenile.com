@@ -101,8 +101,8 @@ async function sanityQuery<T>(env: Env, query: string, params: Record<string, un
 }
 
 const PRODUCTS_QUERY = `*[_type == "product" && !(_id in path("drafts.**")) && _id in $ids]{
-  _id, title, price, stock, taxCode, "imageUrl": images[0].asset->url,
-  variants[]{ label, sku, price, stock }
+  _id, title, price, stock, taxCode, stripeProductId, "imageUrl": images[0].asset->url,
+  variants[]{ label, sku, price, stock, stripeProductId }
 }`;
 
 const SETTINGS_QUERY = `*[_type == "commerceSettings" && _id == "commerceSettings"][0]{
@@ -193,24 +193,40 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
       }
     }
 
-    const optionSuffix = cleanOptions?.length
-      ? ` — ${cleanOptions.map((o) => o.value).join(' / ')}`
-      : '';
-    const baseName = variant?.label ? `${p.title} — ${variant.label}` : p.title;
-    const metadata: Record<string, string> = { productId: p._id, sku: item.sku || '' };
-    if (cleanOptions?.length) metadata.optionsJson = JSON.stringify(cleanOptions);
-
-    const product_data: Record<string, unknown> = {
-      name: `${baseName}${optionSuffix}`,
-      metadata,
+    const price_data: Record<string, unknown> = {
+      currency,
+      unit_amount: toCents(unit),
+      tax_behavior: 'exclusive',
     };
-    if (p.imageUrl) product_data.images = [p.imageUrl];
-    if (taxEnabled) product_data.tax_code = p.taxCode || defaultTaxCode;
+    // Merch synced by scripts/setup-merch-coupon.mjs checks out against a
+    // persistent Stripe Product (one per SKU/variant) instead of an ad-hoc one,
+    // so the merch-only WTN15OFF coupon (applies_to.products) can target it.
+    // Name/images/tax_code/metadata are baked in at creation time in that case.
+    // Ticket/bundle products never get a stripeProductId, so they always fall
+    // through to the ad-hoc path below — which is also the fallback for any
+    // merch item that hasn't been synced yet (checkout still works, it's just
+    // not coupon-eligible until the script runs).
+    const stripeProductId: string | undefined = variant ? variant.stripeProductId : p.stripeProductId;
+    if (stripeProductId) {
+      price_data.product = stripeProductId;
+    } else {
+      const optionSuffix = cleanOptions?.length
+        ? ` — ${cleanOptions.map((o) => o.value).join(' / ')}`
+        : '';
+      const baseName = variant?.label ? `${p.title} — ${variant.label}` : p.title;
+      const metadata: Record<string, string> = { productId: p._id, sku: item.sku || '' };
+      if (cleanOptions?.length) metadata.optionsJson = JSON.stringify(cleanOptions);
 
-    line_items.push({
-      quantity: qty,
-      price_data: { currency, unit_amount: toCents(unit), tax_behavior: 'exclusive', product_data },
-    });
+      const product_data: Record<string, unknown> = {
+        name: `${baseName}${optionSuffix}`,
+        metadata,
+      };
+      if (p.imageUrl) product_data.images = [p.imageUrl];
+      if (taxEnabled) product_data.tax_code = p.taxCode || defaultTaxCode;
+      price_data.product_data = product_data;
+    }
+
+    line_items.push({ quantity: qty, price_data });
   }
 
   const rates = (settings?.shippingRates?.length ? settings.shippingRates : DEFAULTS.shipping).slice(0, 5);

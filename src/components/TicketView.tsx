@@ -124,7 +124,7 @@ export default function TicketView() {
         {isVip ? 'VIP · Ultimate Fan' : 'General Admission'}
       </span>
       <h1 className="ticket__title">Wake the Nile — Sep 19</h1>
-      <p className="ticket__venue">Maggie Mae’s Upstairs</p>
+      <p className="ticket__venue">Dwell Coworking Manchaca Auditorium</p>
       {ticket.name && <p className="ticket__name">{ticket.name}</p>}
       <p className="ticket__admits">Admits {ticket.admits}</p>
 
