@@ -20,57 +20,59 @@ const overlayOpacity = typeof ov?.opacity === 'number' ? ov.opacity : 0.5;
 ---
 
 <BaseLayout title="Shows" description="Tour dates and live shows." footer="scroll">
-  <!-- Fixed-height hero (not a full-page fixed backdrop) so the list below
-       sits in plain black instead of overlaid on the photo. -->
-  <section class="shows-hero" style={bg ? `--cover-bg: url('${bg}')` : undefined}>
-    {bg && <div class="shows-hero__bg" />}
+  <!-- Reverted to the original fixed full-page backdrop (sized against the
+       viewport, matching every other cover page on the site) — a shorter,
+       explicitly-sized hero distorted the crop (zoomed/cropped differently
+       than the source image intends, reading as stretched/blurry). The
+       list is positioned lower, in the open space below the faces, rather
+       than pushed into a separate black section below the image. -->
+  <section class="shows" style={bg ? `--cover-bg: url('${bg}')` : undefined}>
+    {bg && <div class="shows__bg" />}
     {bg && overlayOn && (
-      <div class="shows-hero__overlay" style={`background:${overlayColor}; opacity:${overlayOpacity}`} />
+      <div class="shows__overlay" style={`background:${overlayColor}; opacity:${overlayOpacity}`} />
     )}
-    <h1 class="shows-hero__title">Shows</h1>
-  </section>
-  <section class="shows-list">
-    <ShowList upcoming={upcoming} past={past} />
+    <div class="shows__content">
+      <h1 class="shows__title">Shows</h1>
+      <ShowList upcoming={upcoming} past={past} />
+    </div>
   </section>
 </BaseLayout>
 
 <style>
-  .shows-hero {
+  .shows {
     position: relative;
-    min-height: 65vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    min-height: 100svh;
+    padding-bottom: 4rem;
   }
-  .shows-hero__bg {
-    position: absolute;
+  .shows__bg {
+    position: fixed;
     inset: 0;
     background-image: var(--cover-bg);
     background-size: cover;
     background-position: center;
     z-index: -2;
   }
-  .shows-hero__overlay {
-    position: absolute;
+  .shows__overlay {
+    position: fixed;
     inset: 0;
     z-index: -1;
   }
-  .shows-hero__title {
+  .shows__content {
     position: relative;
     z-index: 1;
+    /* Lands the list in the open space below the faces/arms. */
+    padding: 48vh 0 2rem;
+  }
+  .shows__title {
     text-align: center;
     color: var(--accent);
     font-size: clamp(3.5rem, 3rem + 4vw, 5.5rem);
+    margin-bottom: 1.5rem;
     letter-spacing: -0.02em;
-    margin: 0;
-  }
-  .shows-list {
-    background: var(--bg);
-    padding: 2.5rem 1.25rem 5rem;
   }
   @media (max-width: 640px) {
-    .shows-hero {
-      min-height: 45vh;
+    .shows__content {
+      padding-top: 38vh;
     }
   }
 </style>
