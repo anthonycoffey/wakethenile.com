@@ -26,7 +26,9 @@ const shows = [...upcoming, ...past];
   .showlist-wrapper {
     border: 1px solid var(--accent);
     padding: 0 3rem 3rem;
-    max-width: 640px;
+    /* Wide enough that a title + date + location + button fit on one row
+       without the title wrapping awkwardly (was 640px, cramped for that). */
+    max-width: 1000px;
     margin: 0 auto;
   }
   .showlist-wrapper ul {

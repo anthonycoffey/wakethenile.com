@@ -55,22 +55,19 @@ const ticketsLabel = show.ticketsLabel || 'Get Tickets';
   }
   .show-datewhere {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.25rem;
     min-width: 0;
   }
-  .show-date {
+  .show-date,
+  .show-location {
     color: var(--accent);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 1px;
     font-size: 0.9rem;
-  }
-  .show-location {
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-size: 0.8rem;
+    white-space: nowrap;
   }
   .show-title {
     color: var(--accent);
