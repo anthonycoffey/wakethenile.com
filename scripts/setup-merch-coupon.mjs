@@ -37,7 +37,6 @@ const projectId = process.env.SANITY_PROJECT_ID;
 const dataset = process.env.SANITY_DATASET || 'production';
 const token = process.env.SANITY_WRITE_TOKEN;
 const stripeKey = process.env.STRIPE_SECRET_KEY;
-const STRIPE_VERSION = '2026-06-24.dahlia';
 
 // Never eligible for WTN15OFF — the ticket and both bundles that include one.
 const EXCLUDED_PRODUCT_IDS = new Set([
@@ -66,7 +65,11 @@ async function stripe(method, path, body) {
     headers: {
       authorization: `Bearer ${stripeKey}`,
       'content-type': 'application/x-www-form-urlencoded',
-      'Stripe-Version': STRIPE_VERSION,
+      // No Stripe-Version pin here on purpose — this is a one-off admin
+      // script, not the live payment path (that's checkout.ts, which does
+      // pin it). Letting Stripe use the account's current default version
+      // avoids a version-transform quirk on /promotion_codes that rejected
+      // the (perfectly standard) `coupon` param under the pinned version.
     },
     body: body ? new URLSearchParams(body).toString() : undefined,
   });
