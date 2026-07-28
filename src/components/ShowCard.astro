@@ -1,5 +1,4 @@
 ---
-import VenueMap from './VenueMap.astro';
 import type { Show } from '../lib/types';
 
 interface Props {
@@ -8,21 +7,31 @@ interface Props {
 const { show } = Astro.props;
 
 const dt = show.date ? new Date(show.date) : null;
+// Always render in the venue's local time (Central) regardless of where the
+// site is built/served — without an explicit timeZone this used the build
+// server's clock (UTC on Cloudflare Pages), which showed the wrong day/hour.
 const dateStr = dt
-  ? dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+  ? dt.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: 'America/Chicago',
+    })
   : 'Date TBD';
-const timeStr = dt ? dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+const timeStr = dt
+  ? dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Chicago' })
+  : '';
 const where = [show.city, show.state].filter(Boolean).join(', ');
 const ticketsLabel = show.ticketsLabel || 'Get Tickets';
 ---
 
 <li class="show">
-  {show.venueName && <div class="show-venue-name">{show.venueName}</div>}
-  <div class="show-date-time">{dateStr}{timeStr ? ` · ${timeStr}` : ''}</div>
-  {where && <div class="show-city-state">{where}</div>}
-
-  <VenueMap location={show.location} venueName={show.venueName} />
-
+  <div class="show-info">
+    <span class="show-title">{show.title}</span>
+    <span class="show-when">{dateStr}{timeStr ? ` · ${timeStr}` : ''}</span>
+  </div>
+  <div class="show-location">{where}</div>
   <div class="show-tickets-link">
     {
       show.soldOut ? (
@@ -41,35 +50,39 @@ const ticketsLabel = show.ticketsLabel || 'Get Tickets';
 <style>
   .show {
     list-style: none;
-    text-align: center;
-    padding-top: 2rem;
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.5rem 0;
+    text-align: left;
   }
   .show:not(:last-child) {
-    padding-bottom: 2rem;
     border-bottom: 1px dashed var(--accent);
   }
-  .show-venue-name {
-    font-weight: 700;
-    font-size: 1em;
-    margin-bottom: 8px;
-    color: var(--accent);
-  }
-  .show-date-time {
-    color: var(--accent);
-    font-weight: bold;
-    font-size: 120%;
-  }
-  .show-city-state {
-    color: var(--accent);
-    margin-top: 4px;
-  }
-  .show-tickets-link {
-    margin: 12px 0 8px;
+  .show-info {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+  .show-title {
+    font-weight: 700;
+    font-size: 1.1em;
+    color: var(--accent);
+  }
+  .show-when {
+    color: var(--accent);
+    opacity: 0.75;
+    font-size: 0.85em;
+  }
+  .show-location {
+    color: var(--accent);
+    white-space: nowrap;
   }
   /* outline tickets button (plugin .tickets-button) */
   .tickets-button {
+    display: inline-block;
     color: var(--accent);
     text-transform: uppercase;
     padding: 8px 16px;
@@ -78,6 +91,7 @@ const ticketsLabel = show.ticketsLabel || 'Get Tickets';
     letter-spacing: 2px;
     background: transparent;
     border: 1px solid var(--accent);
+    white-space: nowrap;
     transition: background-color 0.3s ease, color 0.3s ease;
   }
   .tickets-button:hover {
@@ -90,5 +104,16 @@ const ticketsLabel = show.ticketsLabel || 'Get Tickets';
     text-transform: uppercase;
     letter-spacing: 0.1em;
     font-weight: 700;
+    white-space: nowrap;
+  }
+  @media (max-width: 560px) {
+    .show {
+      grid-template-columns: 1fr;
+      gap: 0.5rem;
+      text-align: center;
+    }
+    .show-location {
+      white-space: normal;
+    }
   }
 </style>
