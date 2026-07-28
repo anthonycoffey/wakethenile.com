@@ -35,10 +35,10 @@ at the show) and a real, time-limited **15% off** incentive that applies without
 
 ## Discount
 
-`WTN15OFF` → Stripe coupon `DFFqDqbe`, **15% off**, live, capped at 30 redemptions, **expires 2026-07-17 23:59
-America/Chicago** (`expires_at` set on the code, matching the modal countdown). Applies to the whole checkout
-session (Stripe percent-off coupon). Note: Stripe locks a promotion code's `expires_at` at creation — this expiry
-was set by archiving the original code and recreating `WTN15OFF` with the deadline baked in.
+`WTN15OFF` → **15% off**. As of 2026-07-27 the coupon backing this code was archived and recreated
+scoped to **merch only** (never the ticket or either bundle) — see
+[merch-only-promo.md](./merch-only-promo.md) for why and how. The original coupon (`DFFqDqbe`, applied
+to the whole session, expired 2026-07-17) is defunct.
 
 ## Countdown (removed for now)
 

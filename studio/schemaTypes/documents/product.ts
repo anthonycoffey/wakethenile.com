@@ -85,6 +85,16 @@ export const product = defineType({
               initialValue: 0,
               validation: (Rule) => Rule.min(0).integer(),
             },
+            {
+              name: 'stripeProductId',
+              type: 'string',
+              title: 'Stripe product ID',
+              readOnly: true,
+              description:
+                'Set by scripts/setup-merch-coupon.mjs — a persistent Stripe Product for this specific ' +
+                'variant, so product-restricted coupons can target it. Re-run the script after adding a ' +
+                'new variant (e.g. a new size) to make it coupon-eligible.',
+            },
           ],
           preview: {
             select: {title: 'label', sku: 'sku', stock: 'stock'},
@@ -117,6 +127,17 @@ export const product = defineType({
       description:
         'Stripe Tax product tax code (e.g. txcd_99999999 general goods, txcd_30011000 apparel). ' +
         'Falls back to the store default when blank.',
+    }),
+    defineField({
+      name: 'stripeProductId',
+      title: 'Stripe product ID (base SKU)',
+      type: 'string',
+      readOnly: true,
+      description:
+        'Set by scripts/setup-merch-coupon.mjs. A persistent Stripe Product this base SKU checks out ' +
+        'against instead of an ad-hoc one, so product-restricted coupons (e.g. WTN15OFF) can target it. ' +
+        'Only set for products with no variants — ignored when variants exist. Re-run the script after ' +
+        'adding a new no-variant merch product to make it coupon-eligible.',
     }),
     defineField({name: 'seo', title: 'SEO', type: 'seo'}),
   ],
