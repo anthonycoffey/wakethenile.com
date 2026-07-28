@@ -160,7 +160,8 @@ const descriptionHtml = product ? renderPortableText(product.description) : '';
   .pdp__main,
   .pdp__placeholder {
     width: 100%;
-    aspect-ratio: 4 / 5;
+    /* Matches the catalog's real 1728x2304 (3:4) product photography. */
+    aspect-ratio: 3 / 4;
     object-fit: cover;
     background: #111;
   }
@@ -187,7 +188,7 @@ const descriptionHtml = product ? renderPortableText(product.description) : '';
     position: relative;
     display: block;
     width: 100%;
-    aspect-ratio: 4 / 5;
+    aspect-ratio: 3 / 4;
   }
   .pdp__stackimg {
     position: absolute;

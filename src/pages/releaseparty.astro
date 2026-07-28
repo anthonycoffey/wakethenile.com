@@ -60,7 +60,10 @@ const bundleOptionGroups = bundleOptionGroupsFor(BUNDLE_PRODUCT_ID) ?? [];
 >
   <section class="superfans">
     <p class="superfans__eyebrow">Our First Live Show</p>
-    <h1 class="superfans__title">September 19 — Dwell Coworking Manchaca Auditorium</h1>
+    <h1 class="superfans__title">
+      <span class="superfans__title-date">September 19</span>
+      <span class="superfans__title-venue">@ Dwell Coworking Manchaca Auditorium</span>
+    </h1>
     <p class="superfans__sub">Pick your option below. Early Bird tickets are ${ticketPrice} — additional tiers coming soon.</p>
     <p class="superfans__note">Any merch you get with either option can be picked up at our Merch booth on show night — no shipping wait.</p>
 
@@ -204,10 +207,25 @@ const bundleOptionGroups = bundleOptionGroupsFor(BUNDLE_PRODUCT_ID) ?? [];
     margin: 0 0 0.5rem;
   }
   .superfans__title {
-    color: var(--accent);
-    font-size: clamp(2.25rem, 2rem + 3vw, 3.75rem);
-    letter-spacing: -0.02em;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
     margin: 0 0 0.75rem;
+  }
+  .superfans__title-date {
+    color: var(--accent);
+    font-size: clamp(2rem, 1.6rem + 3vw, 3.5rem);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  .superfans__title-venue {
+    color: var(--accent);
+    font-size: clamp(1rem, 0.85rem + 1vw, 1.5rem);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+    opacity: 0.9;
   }
   .superfans__sub {
     color: var(--muted);

@@ -616,7 +616,9 @@
 }
 .shopb__media {
   position: relative;
-  aspect-ratio: 4 / 5;
+  /* Matches the catalog's real 1728x2304 (3:4) product photography — a 4:5
+     box was cropping the top/bottom off framed art (e.g. the poster's red border). */
+  aspect-ratio: 3 / 4;
   background: #111;
   overflow: hidden;
   margin-bottom: 0.9rem;
