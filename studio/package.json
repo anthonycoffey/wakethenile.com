@@ -12,6 +12,7 @@
     "schema:deploy": "sanity schema deploy"
   },
   "dependencies": {
+    "@sanity/ui": "^3.3.5",
     "@sanity/vision": "^6.5.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

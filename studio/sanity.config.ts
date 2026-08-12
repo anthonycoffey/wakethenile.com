@@ -2,6 +2,7 @@ import { defineConfig } from 'sanity';
 import { structureTool } from 'sanity/structure';
 import { visionTool } from '@sanity/vision';
 import { schemaTypes } from './schemaTypes';
+import { MerchOrdersTable } from './components/MerchOrdersTable';
 
 const projectId = process.env.SANITY_STUDIO_PROJECT_ID || 'c7fly3e4';
 const dataset = process.env.SANITY_STUDIO_DATASET || 'production';
@@ -37,6 +38,10 @@ export default defineConfig({
             S.documentTypeListItem('product').title('Merch'),
             S.documentTypeListItem('productCategory').title('Categories'),
             S.documentTypeListItem('order').title('Orders'),
+            S.listItem()
+              .title('Merch orders (list)')
+              .id('merchOrdersReport')
+              .child(S.component(MerchOrdersTable).title('Merch orders').id('merchOrdersReport')),
             S.listItem()
               .title('Commerce settings')
               .id('commerceSettings')
