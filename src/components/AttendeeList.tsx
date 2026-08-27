@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 interface Attendee {
   name: string | null;
   email: string | null;
-  tier: 'ga' | 'vip' | null;
+  tier: 'ga' | 'vip' | 'ga-plus' | null;
   admits: number | null;
   checkedInAt: string | null;
   ticketCode: string | null;

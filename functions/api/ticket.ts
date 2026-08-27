@@ -55,9 +55,10 @@ export const onRequestGet = async (context: { request: Request; env: Env }): Pro
   }
   if (!order) return json({ error: 'Ticket not found.' }, 404);
 
+  const tier = order.ticketTier === 'vip' || order.ticketTier === 'ga-plus' ? order.ticketTier : 'ga';
   return json({
     name: order.customerName ?? null,
-    tier: order.ticketTier === 'vip' ? 'vip' : 'ga',
+    tier,
     admits: order.admits ?? 1,
     checkedInAt: order.checkedInAt ?? null,
   });

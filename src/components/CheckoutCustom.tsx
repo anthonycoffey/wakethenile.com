@@ -53,11 +53,17 @@ function amountText(a: any): string {
   return String(a);
 }
 
-// Pickup-only products (ticket + VIP experience bundle) — these carts ship
-// nothing. Mirrors PICKUP_ELIGIBLE_PRODUCT_IDS in functions/api/checkout.ts.
+// Pickup-only products (tickets + the VIP experience bundle) — these carts
+// ship nothing. Mirrors PICKUP_ELIGIBLE_PRODUCT_IDS in functions/api/checkout.ts.
+// See docs/specs/active/albumrelease-ga-tiers.md for the full sync checklist.
 const TICKET_PRODUCT_ID = '2480f00d-9317-4ed0-9406-bcef1e34bc71';
 const EXPERIENCE_PRODUCT_ID = 'b351d11f-4c78-4a1f-b36b-c10d951c96ea'; // includes pickup-at-show merch
-const PICKUP_PRODUCT_IDS = new Set([TICKET_PRODUCT_ID, EXPERIENCE_PRODUCT_ID]);
+const PICKUP_PRODUCT_IDS = new Set([
+  TICKET_PRODUCT_ID,
+  EXPERIENCE_PRODUCT_ID,
+  'albumrelease-ga',
+  'albumrelease-ga-plus',
+]);
 
 function CheckoutForm({
   allPickup,

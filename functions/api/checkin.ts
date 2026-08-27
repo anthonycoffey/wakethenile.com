@@ -89,7 +89,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
 
   const base = {
     name: order.customerName ?? null,
-    tier: order.ticketTier === 'vip' ? 'vip' : 'ga',
+    tier: order.ticketTier === 'vip' || order.ticketTier === 'ga-plus' ? order.ticketTier : 'ga',
     admits: order.admits ?? 1,
   };
 

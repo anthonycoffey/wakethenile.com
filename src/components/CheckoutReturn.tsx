@@ -91,7 +91,7 @@ export default function CheckoutReturn() {
             {ticket ? (
               <>
                 <p className="return__ticketlabel">
-                  🎟️ Your {ticket.tier === 'vip' ? 'VIP ' : ''}ticket
+                  🎟️ Your {ticket.ticketTier === 'vip' ? 'VIP ' : ticket.ticketTier === 'ga-plus' ? 'GA+ (free drinks!) ' : ''}ticket
                   {ticket.admits > 1 ? ` (admits ${ticket.admits})` : ''} — show this at the door
                 </p>
                 <div

@@ -1,0 +1,288 @@
+---
+// wakethenile.com/albumrelease
+// Second presale landing page for the same live show as /releaseparty (Sept 19
+// @ Dwell Coworking Manchaca Auditorium), built for a separate ad campaign with
+// its own pricing tiers: GA ($30, ticket only) and GA+ ($60, ticket + free
+// drinks all night — no merch, so no tee/size picker). /releaseparty and its
+// tiers are untouched; this is an independent funnel selling different Sanity
+// products for the same event. See docs/specs/active/albumrelease-ga-tiers.md.
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { sanityFetch } from '../lib/sanity';
+import { urlForWidth } from '../lib/sanityImage';
+
+interface PresaleProduct {
+  id: string;
+  images?: unknown[];
+  price?: number;
+}
+
+// Product IDs + cart line data. These match the products created in Sanity;
+// if you ever recreate these products, update the IDs here (and the sync
+// checklist in the spec above) to match.
+const GA_PRODUCT_ID = 'albumrelease-ga';
+const GA_PLUS_PRODUCT_ID = 'albumrelease-ga-plus';
+
+const query = `*[_type == "product" && _id in [$gaId, $gaPlusId]]{
+  "id": _id, images, price
+}`;
+const products = await sanityFetch<PresaleProduct[]>(
+  query,
+  { gaId: GA_PRODUCT_ID, gaPlusId: GA_PLUS_PRODUCT_ID },
+  [],
+);
+const ga = products.find((p) => p.id === GA_PRODUCT_ID);
+const gaPlus = products.find((p) => p.id === GA_PLUS_PRODUCT_ID);
+
+// Prices always come from Sanity (same source checkout re-validates against)
+// rather than being hardcoded here, so a price change in the CMS doesn't
+// silently drift from what this page displays.
+const gaPrice = ga?.price ?? 0;
+const gaPlusPrice = gaPlus?.price ?? 0;
+
+const gaImg = urlForWidth(ga?.images?.[0], 900);
+const gaPlusImg = urlForWidth(gaPlus?.images?.[0], 900);
+---
+
+<BaseLayout
+  title="Album Release Presale"
+  description="Get tickets to our first live show — September 19th at Dwell Coworking Manchaca Auditorium."
+  footer="scroll"
+>
+  <section class="albumrelease">
+    <p class="albumrelease__eyebrow">Our First Live Show</p>
+    <h1 class="albumrelease__title">
+      <span class="albumrelease__title-date">September 19</span>
+      <span class="albumrelease__title-venue">@ Dwell Coworking Manchaca Auditorium</span>
+    </h1>
+    <p class="albumrelease__sub">
+      Pick your tier below. GA is General Admission entry — GA+ throws in
+      <span class="albumrelease__highlight">🍹 free drinks, all night long</span>.
+    </p>
+    <p class="albumrelease__note">Tickets are collected at the door on show night — nothing ships.</p>
+
+    <div class="albumrelease__cards">
+      <button type="button" class="albumrelease__card" data-product="ga-plus" data-price={gaPlusPrice}>
+        <span class="albumrelease__imgstack">
+          {gaPlusImg && <img src={gaPlusImg} alt="Album Release Show Poster" class="albumrelease__img" />}
+        </span>
+        <h2 class="albumrelease__name">GA+</h2>
+        <p class="albumrelease__price">${gaPlusPrice}</p>
+        <p class="albumrelease__perk">🍹 Free Drinks All Night</p>
+        <p class="albumrelease__desc">Includes the Live Show Ticket</p>
+        <span class="albumrelease__cta">Add to Cart →</span>
+      </button>
+
+      <button type="button" class="albumrelease__card" data-product="ga" data-price={gaPrice}>
+        <span class="albumrelease__imgstack">
+          {gaImg && <img src={gaImg} alt="Album Release Show Poster" class="albumrelease__img" />}
+        </span>
+        <h2 class="albumrelease__name">GA</h2>
+        <p class="albumrelease__price">${gaPrice}</p>
+        <p class="albumrelease__desc">General Admission — Live Show Ticket</p>
+        <span class="albumrelease__cta">Add to Cart →</span>
+      </button>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import { addItem } from '../lib/cart';
+
+  const GA_PRODUCT_ID = 'albumrelease-ga';
+  const GA_PLUS_PRODUCT_ID = 'albumrelease-ga-plus';
+
+  const cardImage = (root: Element): string | undefined =>
+    root.querySelector('img')?.getAttribute('src') ?? undefined;
+
+  // GA+ — no options to pick (no merch), so it goes straight to checkout,
+  // same as the original bundle's frictionless path.
+  const gaPlusCard = document.querySelector<HTMLButtonElement>('[data-product="ga-plus"]');
+  gaPlusCard?.addEventListener('click', () => {
+    addItem({
+      productId: GA_PLUS_PRODUCT_ID,
+      slug: 'ga-plus-album-release',
+      title: 'GA+',
+      sku: 'GA-PLUS',
+      unitPrice: Number(gaPlusCard.dataset.price) || 0,
+      qty: 1,
+      image: cardImage(gaPlusCard),
+    });
+    window.location.href = '/checkout';
+  });
+
+  // GA — plain ticket, nudges to merch before checkout (matching the existing
+  // ticket-only flow on /releaseparty).
+  const gaCard = document.querySelector<HTMLButtonElement>('[data-product="ga"]');
+  gaCard?.addEventListener('click', () => {
+    addItem({
+      productId: GA_PRODUCT_ID,
+      slug: 'ga-album-release',
+      title: 'GA',
+      sku: 'GA',
+      qty: 1,
+      unitPrice: Number(gaCard.dataset.price) || 0,
+      image: cardImage(gaCard),
+    });
+    sessionStorage.setItem('wtn_upsell_msg', '1');
+    sessionStorage.setItem('wtn_promo', 'WTN15OFF');
+    window.location.href = '/merch';
+  });
+</script>
+
+<style>
+  .albumrelease {
+    max-width: 1100px;
+    margin-inline: auto;
+    padding: calc(8vh + 4.5rem) 1.5rem 2rem;
+    text-align: center;
+  }
+  .albumrelease__eyebrow {
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem;
+  }
+  .albumrelease__title {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    margin: 0 0 0.75rem;
+  }
+  .albumrelease__title-date {
+    color: var(--accent);
+    font-size: clamp(2rem, 1.6rem + 3vw, 3.5rem);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  .albumrelease__title-venue {
+    color: var(--accent);
+    font-size: clamp(1rem, 0.85rem + 1vw, 1.5rem);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+    opacity: 0.9;
+  }
+  .albumrelease__sub {
+    color: var(--muted);
+    max-width: 46ch;
+    margin: 0 auto 0.75rem;
+    font-size: 0.95rem;
+  }
+  .albumrelease__note {
+    color: var(--accent);
+    opacity: 0.85;
+    max-width: 46ch;
+    margin: 0 auto 3.5rem;
+    font-size: 0.82rem;
+  }
+  .albumrelease__highlight {
+    display: inline-block;
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
+    color: var(--accent);
+    font-weight: 800;
+    padding: 0.05em 0.5em;
+    border-radius: 6px;
+  }
+
+  /* Cards float below the main content and slightly overlap the footer. */
+  .albumrelease__cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: -70px;
+    position: relative;
+    z-index: 2;
+  }
+  @media (max-width: 720px) {
+    .albumrelease__cards {
+      grid-template-columns: 1fr;
+      margin-bottom: -40px;
+    }
+  }
+
+  .albumrelease__card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #0d0d0d;
+    border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+    border-radius: var(--radius);
+    padding: 2rem 1.5rem 2.25rem;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--accent);
+    transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+  .albumrelease__card:hover,
+  .albumrelease__card:focus-visible {
+    transform: translateY(-10px) scale(1.03);
+    border-color: var(--accent);
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.55);
+    outline: none;
+  }
+
+  .albumrelease__imgstack {
+    display: block;
+    width: 100%;
+    max-width: 320px;
+    /* Matches the poster art's real 1728x2304 (3:4) proportions. */
+    aspect-ratio: 3 / 4;
+    margin-bottom: 1.5rem;
+  }
+  .albumrelease__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: calc(var(--radius) - 2px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+  }
+
+  .albumrelease__name {
+    font-size: 1.15rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    margin: 0 0 0.4rem;
+  }
+  .albumrelease__price {
+    font-size: 1.75rem;
+    font-weight: 800;
+    margin: 0 0 0.6rem;
+  }
+  .albumrelease__perk {
+    color: var(--accent-ink);
+    background: var(--accent);
+    display: inline-block;
+    font-size: 0.9rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    padding: 0.35em 0.9em;
+    border-radius: 100px;
+    margin: 0 0 0.75rem;
+  }
+  .albumrelease__desc {
+    color: var(--muted);
+    font-size: 0.85rem;
+    max-width: 30ch;
+    margin: 0 0 1.5rem;
+  }
+  .albumrelease__cta {
+    display: inline-block;
+    border: 2px solid var(--accent);
+    color: var(--accent);
+    border-radius: 100px;
+    text-transform: uppercase;
+    font-weight: 800;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    padding: 0.6em 1.4em;
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+  .albumrelease__card:hover .albumrelease__cta {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+</style>
