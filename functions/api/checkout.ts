@@ -14,11 +14,14 @@
 const STRIPE_VERSION = '2026-06-24.dahlia';
 
 // Products that unlock the "Pick up at Merch booth" shipping option — the
-// live-show ticket and superfan bundle sold from /superfans. Update this set
-// if those products are ever recreated with new IDs.
+// ticket/bundle products sold from /releaseparty and /albumrelease. Update
+// this set if those products are ever recreated with new IDs. See
+// docs/specs/active/albumrelease-ga-tiers.md for the full sync checklist.
 const PICKUP_ELIGIBLE_PRODUCT_IDS = new Set([
   '2480f00d-9317-4ed0-9406-bcef1e34bc71', // Live Show Ticket
   'b351d11f-4c78-4a1f-b36b-c10d951c96ea', // VIP Fan Experience (superfan bundle)
+  'albumrelease-ga', // GA (/albumrelease)
+  'albumrelease-ga-plus', // GA Plus (/albumrelease)
 ]);
 
 // Required tee/size selections for the bundle products. MIRRORS

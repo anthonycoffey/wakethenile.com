@@ -10,11 +10,22 @@
  */
 const STRIPE_VERSION = '2026-06-24.dahlia';
 
-// Admit-granting products for the Sep 19 show. Mirrors the ids in
-// functions/api/checkout.ts (PICKUP_ELIGIBLE_PRODUCT_IDS) — keep in sync if
-// these products are ever recreated. VIP = the VIP Fan Experience bundle.
-const TICKET_PRODUCT_ID = '2480f00d-9317-4ed0-9406-bcef1e34bc71'; // Live Show Ticket → GA
-const VIP_PRODUCT_ID = 'b351d11f-4c78-4a1f-b36b-c10d951c96ea'; // VIP Fan Experience → VIP
+// Admit-granting products for the Sep 19 show, and which door tier each one
+// grants. Mirrors the ids in functions/api/checkout.ts
+// (PICKUP_ELIGIBLE_PRODUCT_IDS) — keep in sync if these products are ever
+// recreated. See docs/specs/active/albumrelease-ga-tiers.md for the full
+// sync checklist. VIP = the VIP Fan Experience bundle (ticket + drinks +
+// merch tee); GA Plus = ticket + drinks, no merch.
+type TicketTier = 'ga' | 'vip' | 'ga-plus';
+const TICKET_TIER_BY_PRODUCT_ID: Record<string, TicketTier> = {
+  '2480f00d-9317-4ed0-9406-bcef1e34bc71': 'ga', // Live Show Ticket (/releaseparty)
+  'b351d11f-4c78-4a1f-b36b-c10d951c96ea': 'vip', // VIP Fan Experience (/releaseparty)
+  'albumrelease-ga': 'ga', // GA (/albumrelease)
+  'albumrelease-ga-plus': 'ga-plus', // GA Plus (/albumrelease)
+};
+// If a cart somehow mixes tiers, the order's headline tier is the best perk
+// present — admits still sum every ticket-shaped line regardless of tier.
+const TIER_PRIORITY: TicketTier[] = ['vip', 'ga-plus', 'ga'];
 // HubSpot contact property that flags a Sep 19 attendee (value "GA"/"VIP").
 const HUBSPOT_TICKET_PROPERTY = 'wtn_show_2026_09_19';
 
@@ -126,7 +137,7 @@ async function hubspotUpsertAttendee(
   env: Env,
   email: string | null,
   name: string | null,
-  tier: 'ga' | 'vip',
+  tier: TicketTier,
 ): Promise<void> {
   if (!env.HUBSPOT_TOKEN || !email) return;
   const [firstname, ...rest] = (name ?? '').trim().split(/\s+/);
@@ -255,13 +266,14 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
     // Live-show ticketing: if this order includes a ticket/bundle, stamp a QR
     // code + tier + admit count so it becomes a scannable pass at the door.
     const admits = lineItems
-      .filter((li: any) => li.productId === TICKET_PRODUCT_ID || li.productId === VIP_PRODUCT_ID)
+      .filter((li: any) => TICKET_TIER_BY_PRODUCT_ID[li.productId])
       .reduce((n: number, li: any) => n + (li.qty ?? 1), 0);
     const isTicketOrder = admits > 0;
-    const ticketTier: 'ga' | 'vip' | undefined = isTicketOrder
-      ? lineItems.some((li: any) => li.productId === VIP_PRODUCT_ID)
-        ? 'vip'
-        : 'ga'
+    const tiersInCart = new Set(
+      lineItems.map((li: any) => TICKET_TIER_BY_PRODUCT_ID[li.productId]).filter(Boolean),
+    );
+    const ticketTier: TicketTier | undefined = isTicketOrder
+      ? TIER_PRIORITY.find((t) => tiersInCart.has(t))
       : undefined;
     const ticketCode = isTicketOrder ? crypto.randomUUID() : undefined;
 
@@ -345,7 +357,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
     // Does this order contain anything that actually ships (i.e. real merch,
     // not the ticket or the pickup-at-show bundle)? Drives the closing line.
     const hasShippableMerch = lineItems.some(
-      (li: any) => li.productId && li.productId !== TICKET_PRODUCT_ID && li.productId !== VIP_PRODUCT_ID,
+      (li: any) => li.productId && !TICKET_TIER_BY_PRODUCT_ID[li.productId],
     );
     const closingHtml = hasShippableMerch
       ? `<p>We’ll email you again when it ships.</p>`
@@ -357,7 +369,9 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
     const ticketHtml =
       isTicketOrder && ticketCode
         ? `<div style="margin:20px 0;padding:16px;border:2px solid #caa04a;border-radius:10px">
-             <p style="margin:0 0 8px"><strong>🎟️ Your ${ticketTier === 'vip' ? 'VIP' : 'show'} ticket${
+             <p style="margin:0 0 8px"><strong>🎟️ Your ${
+               ticketTier === 'vip' ? 'VIP' : ticketTier === 'ga-plus' ? 'GA Plus' : 'show'
+             } ticket${
                (admits ?? 1) > 1 ? `s (admits ${admits})` : ''
              }</strong></p>
              <p style="margin:0 0 12px">Show this at the door on September 19 — save it or screenshot it:</p>

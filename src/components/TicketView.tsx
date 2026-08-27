@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { qrSvg } from '../lib/qr';
 
-type Tier = 'ga' | 'vip';
+type Tier = 'ga' | 'vip' | 'ga-plus';
 interface Ticket {
   name: string | null;
   tier: Tier;
@@ -38,7 +38,7 @@ export default function TicketView() {
         if (!res.ok) throw new Error(data.error || 'lookup failed');
         setTicket({
           name: data.name ?? null,
-          tier: data.tier === 'vip' ? 'vip' : 'ga',
+          tier: data.tier === 'vip' || data.tier === 'ga-plus' ? data.tier : 'ga',
           admits: data.admits ?? 1,
           checkedInAt: data.checkedInAt ?? null,
         });
@@ -116,12 +116,13 @@ export default function TicketView() {
     );
 
   const isVip = ticket.tier === 'vip';
+  const isGaPlus = ticket.tier === 'ga-plus';
   const checkedIn = !!ticket.checkedInAt;
 
   return (
-    <div className={`ticket ${isVip ? 'ticket--vip' : ''}`}>
-      <span className={`ticket__badge ${isVip ? 'ticket__badge--vip' : ''}`}>
-        {isVip ? 'VIP · Ultimate Fan' : 'General Admission'}
+    <div className={`ticket ${isVip ? 'ticket--vip' : isGaPlus ? 'ticket--ga-plus' : ''}`}>
+      <span className={`ticket__badge ${isVip ? 'ticket__badge--vip' : isGaPlus ? 'ticket__badge--ga-plus' : ''}`}>
+        {isVip ? 'VIP · Ultimate Fan' : isGaPlus ? 'GA Plus · Free Drinks' : 'General Admission'}
       </span>
       <h1 className="ticket__title">Wake the Nile — Sep 19</h1>
       <p className="ticket__venue">Dwell Coworking Manchaca Auditorium</p>

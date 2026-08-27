@@ -8,9 +8,12 @@
 const STRIPE_VERSION = '2026-06-24.dahlia';
 
 // Admit-granting products (mirror functions/api/checkout.ts + stripe-webhook.ts).
+// See docs/specs/active/albumrelease-ga-tiers.md for the full sync checklist.
 const TICKET_PRODUCT_IDS = new Set([
   '2480f00d-9317-4ed0-9406-bcef1e34bc71', // Live Show Ticket
   'b351d11f-4c78-4a1f-b36b-c10d951c96ea', // VIP Fan Experience
+  'albumrelease-ga', // GA (/albumrelease)
+  'albumrelease-ga-plus', // GA Plus (/albumrelease)
 ]);
 
 interface Env {
