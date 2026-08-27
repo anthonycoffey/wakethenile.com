@@ -1,4 +1,4 @@
-# Spec: /albumrelease presale page with GA / GA Plus tiers
+# Spec: /albumrelease presale page with GA / GA+ tiers
 
 - **Status:** Active
 - **Date:** 2026-08-26
@@ -26,9 +26,9 @@ coupon targeting yet).
 | Product | `_id` | Price | Stock | Contents |
 |---|---|---|---|---|
 | GA | `albumrelease-ga` | $30 | 500 | Live show ticket only |
-| GA Plus | `albumrelease-ga-plus` | $60 | 500 | Live show ticket + free drinks all night (no merch item — no tee/size picker needed) |
+| GA+ | `albumrelease-ga-plus` | $60 | 500 | Live show ticket + free drinks all night (no merch item — no tee/size picker needed) |
 
-Both reuse the existing show poster image asset. GA Plus's stock was not specified by the requester; 500
+Both reuse the existing show poster image asset. GA+'s stock was not specified by the requester; 500
 was chosen to match GA as a reasonable starting cap — adjust freely in Sanity Studio, it's just a number
 field.
 
@@ -36,7 +36,7 @@ field.
 
 Mirrors `/releaseparty.astro`'s layout, copy tone, and mechanics (same show date/venue), with two cards:
 
-- **GA Plus** (left, $60) — plain click-to-add card, same as a standalone ticket. No options to pick (no
+- **GA+** (left, $60) — plain click-to-add card, same as a standalone ticket. No options to pick (no
   merch), so it skips straight to `/checkout` on click — mirroring how the old VIP bundle went straight to
   checkout, but without the tee/size gate since there's no merch line.
 - **GA** (right, $30) — plain click-to-add card, routes to `/merch` with the same upsell nudge
@@ -62,14 +62,14 @@ to include `'ga-plus'`:
 - `functions/api/stripe-webhook.ts` — product-id → tier map (was two consts + a ternary, now a lookup
   table + priority list), `hubspotUpsertAttendee`'s tier type, the confirmation email's ticket copy
 - `functions/api/ticket.ts`, `functions/api/checkin.ts` — tier pass-through (was `=== 'vip' ? 'vip' : 'ga'`)
-- `src/components/TicketView.tsx` — badge ("GA Plus · Free Drinks"), `Tier` type
+- `src/components/TicketView.tsx` — badge ("GA+ · Free Drinks"), `Tier` type
 - `src/components/AttendeeList.tsx` — `tier` type widened (table/CSV already render any string)
 - `src/components/CheckoutReturn.tsx` — thank-you copy
 - `src/components/CheckoutCustom.tsx` — `PICKUP_PRODUCT_IDS` (both new IDs; `hasPickupMerch` stays scoped
-  to the VIP bundle only, since GA Plus has no physical merch to pick up)
+  to the VIP bundle only, since GA+ has no physical merch to pick up)
 - `studio/schemaTypes/documents/order.ts` — `ticketTier` options list + description
 
-GA Plus is **not** added to any bundle-options allow-list (`src/lib/bundleOptions.ts`,
+GA+ is **not** added to any bundle-options allow-list (`src/lib/bundleOptions.ts`,
 `BUNDLE_OPTION_ALLOW` in `checkout.ts`) — it has no tee/size to select.
 
 ## Consequences
@@ -82,7 +82,7 @@ GA Plus is **not** added to any bundle-options allow-list (`src/lib/bundleOption
 **Harder / trade-offs:**
 
 - A fifth and sixth hard-coded product ID now need to stay in sync across the same six files ADR 0008
-  already flagged as a maintenance cost. If GA/GA Plus are ever recreated with new Sanity `_id`s, all six
+  already flagged as a maintenance cost. If GA/GA+ are ever recreated with new Sanity `_id`s, all six
   need updating together (this spec's table is the checklist).
 - Door staff now see three tiers instead of two; the attendee CSV/list already renders `tier` as a raw
   string, so no export format changed, but anyone reading a "GA" row now needs to check the campaign the

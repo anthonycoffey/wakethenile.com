@@ -370,7 +370,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
       isTicketOrder && ticketCode
         ? `<div style="margin:20px 0;padding:16px;border:2px solid #caa04a;border-radius:10px">
              <p style="margin:0 0 8px"><strong>🎟️ Your ${
-               ticketTier === 'vip' ? 'VIP' : ticketTier === 'ga-plus' ? 'GA Plus' : 'show'
+               ticketTier === 'vip' ? 'VIP' : ticketTier === 'ga-plus' ? 'GA+ (free drinks!)' : 'show'
              } ticket${
                (admits ?? 1) > 1 ? `s (admits ${admits})` : ''
              }</strong></p>

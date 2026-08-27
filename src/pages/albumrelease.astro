@@ -2,7 +2,7 @@
 // wakethenile.com/albumrelease
 // Second presale landing page for the same live show as /releaseparty (Sept 19
 // @ Dwell Coworking Manchaca Auditorium), built for a separate ad campaign with
-// its own pricing tiers: GA ($30, ticket only) and GA Plus ($60, ticket + free
+// its own pricing tiers: GA ($30, ticket only) and GA+ ($60, ticket + free
 // drinks all night — no merch, so no tee/size picker). /releaseparty and its
 // tiers are untouched; this is an independent funnel selling different Sanity
 // products for the same event. See docs/specs/active/albumrelease-ga-tiers.md.
@@ -54,7 +54,10 @@ const gaPlusImg = urlForWidth(gaPlus?.images?.[0], 900);
       <span class="albumrelease__title-date">September 19</span>
       <span class="albumrelease__title-venue">@ Dwell Coworking Manchaca Auditorium</span>
     </h1>
-    <p class="albumrelease__sub">Pick your tier below. GA is General Admission entry — GA Plus adds free drinks all night.</p>
+    <p class="albumrelease__sub">
+      Pick your tier below. GA is General Admission entry — GA+ throws in
+      <span class="albumrelease__highlight">🍹 free drinks, all night long</span>.
+    </p>
     <p class="albumrelease__note">Tickets are collected at the door on show night — nothing ships.</p>
 
     <div class="albumrelease__cards">
@@ -62,9 +65,10 @@ const gaPlusImg = urlForWidth(gaPlus?.images?.[0], 900);
         <span class="albumrelease__imgstack">
           {gaPlusImg && <img src={gaPlusImg} alt="Album Release Show Poster" class="albumrelease__img" />}
         </span>
-        <h2 class="albumrelease__name">GA Plus</h2>
+        <h2 class="albumrelease__name">GA+</h2>
         <p class="albumrelease__price">${gaPlusPrice}</p>
-        <p class="albumrelease__desc">Live Show Ticket + free drinks all night</p>
+        <p class="albumrelease__perk">🍹 Free Drinks All Night</p>
+        <p class="albumrelease__desc">Includes the Live Show Ticket</p>
         <span class="albumrelease__cta">Add to Cart →</span>
       </button>
 
@@ -90,14 +94,14 @@ const gaPlusImg = urlForWidth(gaPlus?.images?.[0], 900);
   const cardImage = (root: Element): string | undefined =>
     root.querySelector('img')?.getAttribute('src') ?? undefined;
 
-  // GA Plus — no options to pick (no merch), so it goes straight to checkout,
+  // GA+ — no options to pick (no merch), so it goes straight to checkout,
   // same as the original bundle's frictionless path.
   const gaPlusCard = document.querySelector<HTMLButtonElement>('[data-product="ga-plus"]');
   gaPlusCard?.addEventListener('click', () => {
     addItem({
       productId: GA_PLUS_PRODUCT_ID,
       slug: 'ga-plus-album-release',
-      title: 'GA Plus',
+      title: 'GA+',
       sku: 'GA-PLUS',
       unitPrice: Number(gaPlusCard.dataset.price) || 0,
       qty: 1,
@@ -174,6 +178,14 @@ const gaPlusImg = urlForWidth(gaPlus?.images?.[0], 900);
     margin: 0 auto 3.5rem;
     font-size: 0.82rem;
   }
+  .albumrelease__highlight {
+    display: inline-block;
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
+    color: var(--accent);
+    font-weight: 800;
+    padding: 0.05em 0.5em;
+    border-radius: 6px;
+  }
 
   /* Cards float below the main content and slightly overlap the footer. */
   .albumrelease__cards {
@@ -238,6 +250,18 @@ const gaPlusImg = urlForWidth(gaPlus?.images?.[0], 900);
     font-size: 1.75rem;
     font-weight: 800;
     margin: 0 0 0.6rem;
+  }
+  .albumrelease__perk {
+    color: var(--accent-ink);
+    background: var(--accent);
+    display: inline-block;
+    font-size: 0.9rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    padding: 0.35em 0.9em;
+    border-radius: 100px;
+    margin: 0 0 0.75rem;
   }
   .albumrelease__desc {
     color: var(--muted);

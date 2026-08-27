@@ -122,7 +122,7 @@ export default function TicketView() {
   return (
     <div className={`ticket ${isVip ? 'ticket--vip' : isGaPlus ? 'ticket--ga-plus' : ''}`}>
       <span className={`ticket__badge ${isVip ? 'ticket__badge--vip' : isGaPlus ? 'ticket__badge--ga-plus' : ''}`}>
-        {isVip ? 'VIP · Ultimate Fan' : isGaPlus ? 'GA Plus · Free Drinks' : 'General Admission'}
+        {isVip ? 'VIP · Ultimate Fan' : isGaPlus ? 'GA+ · Free Drinks All Night' : 'General Admission'}
       </span>
       <h1 className="ticket__title">Wake the Nile — Sep 19</h1>
       <p className="ticket__venue">Dwell Coworking Manchaca Auditorium</p>
