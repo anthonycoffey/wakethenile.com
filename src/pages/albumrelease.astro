@@ -1,14 +1,18 @@
 ---
 // wakethenile.com/albumrelease
-// Second presale landing page for the same live show as /releaseparty (Sept 19
-// @ Dwell Coworking Manchaca Auditorium), built for a separate ad campaign with
-// its own pricing tiers: GA ($30, ticket only) and GA+ ($60, ticket + free
-// drinks all night — no merch, so no tee/size picker). /releaseparty and its
-// tiers are untouched; this is an independent funnel selling different Sanity
-// products for the same event. See docs/specs/active/albumrelease-ga-tiers.md.
+// The single presale landing page for our first live show (Sept 19 @ Dwell
+// Coworking Manchaca Auditorium). Three tiers: VIP Fan Experience ($100,
+// ticket + free drinks + Ultimate Fan Merch Bundle, tee/size picker), GA+
+// ($60, ticket + free drinks all night), and GA ($30, ticket only).
+// /releaseparty used to sell the VIP bundle (and a separate $20 "Early Bird"
+// GA ticket, now retired) as its own funnel — it now 301s here
+// (public/_redirects) so every entry point on the site converges on one page
+// and one price ladder. See docs/specs/active/albumrelease-consolidate-releaseparty.md
+// and docs/specs/active/albumrelease-ga-tiers.md.
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { sanityFetch } from '../lib/sanity';
 import { urlForWidth } from '../lib/sanityImage';
+import { bundleOptionGroupsFor } from '../lib/bundleOptions';
 
 interface PresaleProduct {
   id: string;
@@ -18,29 +22,41 @@ interface PresaleProduct {
 
 // Product IDs + cart line data. These match the products created in Sanity;
 // if you ever recreate these products, update the IDs here (and the sync
-// checklist in the spec above) to match.
-const GA_PRODUCT_ID = 'albumrelease-ga';
+// checklist in the specs above) to match.
+const VIP_PRODUCT_ID = 'b351d11f-4c78-4a1f-b36b-c10d951c96ea';
 const GA_PLUS_PRODUCT_ID = 'albumrelease-ga-plus';
+const GA_PRODUCT_ID = 'albumrelease-ga';
 
-const query = `*[_type == "product" && _id in [$gaId, $gaPlusId]]{
+const query = `*[_type == "product" && _id in [$vipId, $gaPlusId, $gaId]]{
   "id": _id, images, price
 }`;
 const products = await sanityFetch<PresaleProduct[]>(
   query,
-  { gaId: GA_PRODUCT_ID, gaPlusId: GA_PLUS_PRODUCT_ID },
+  { vipId: VIP_PRODUCT_ID, gaPlusId: GA_PLUS_PRODUCT_ID, gaId: GA_PRODUCT_ID },
   [],
 );
-const ga = products.find((p) => p.id === GA_PRODUCT_ID);
+const vip = products.find((p) => p.id === VIP_PRODUCT_ID);
 const gaPlus = products.find((p) => p.id === GA_PLUS_PRODUCT_ID);
+const ga = products.find((p) => p.id === GA_PRODUCT_ID);
 
 // Prices always come from Sanity (same source checkout re-validates against)
 // rather than being hardcoded here, so a price change in the CMS doesn't
 // silently drift from what this page displays.
-const gaPrice = ga?.price ?? 0;
+const vipPrice = vip?.price ?? 0;
 const gaPlusPrice = gaPlus?.price ?? 0;
+const gaPrice = ga?.price ?? 0;
 
-const gaImg = urlForWidth(ga?.images?.[0], 900);
+// VIP reuses the same "interlocked" poster-behind / bundle-photo-in-front
+// stack /releaseparty used — the show poster is GA's image, shared across
+// tiers (see the spec: "Both reuse the existing show poster image asset").
+const posterImg = urlForWidth(ga?.images?.[0], 900);
+const vipImg = urlForWidth(vip?.images?.[0], 900);
 const gaPlusImg = urlForWidth(gaPlus?.images?.[0], 900);
+const gaImg = posterImg;
+
+// Tee/size the customer must pick with the VIP bundle (shared with /merch +
+// the checkout validator). See ADR 0007 / src/lib/bundleOptions.ts.
+const vipOptionGroups = bundleOptionGroupsFor(VIP_PRODUCT_ID) ?? [];
 ---
 
 <BaseLayout
@@ -56,11 +72,42 @@ const gaPlusImg = urlForWidth(gaPlus?.images?.[0], 900);
     </h1>
     <p class="albumrelease__sub">
       Pick your tier below. GA is General Admission entry — GA+ throws in
-      <span class="albumrelease__highlight">🍹 free drinks, all night long</span>.
+      <span class="albumrelease__highlight">🍹 free drinks, all night long</span> — or go all-in with the
+      VIP Fan Experience for free drinks plus the Ultimate Fan Merch Bundle.
     </p>
-    <p class="albumrelease__note">Tickets are collected at the door on show night — nothing ships.</p>
+    <p class="albumrelease__note">Tickets are collected at the door on show night; any merch can be picked up at our Merch booth — nothing ships.</p>
 
     <div class="albumrelease__cards">
+      <div class="albumrelease__card albumrelease__card--bundle">
+        <span class="albumrelease__imgstack albumrelease__imgstack--double">
+          {posterImg && <img src={posterImg} alt="Album Release Show Poster" class="albumrelease__img albumrelease__img--back" />}
+          {vipImg && <img src={vipImg} alt="Ultimate Fan Merch Bundle" class="albumrelease__img albumrelease__img--front" />}
+        </span>
+        <h2 class="albumrelease__name">VIP Fan Experience</h2>
+        <p class="albumrelease__price">${vipPrice}</p>
+        <p class="albumrelease__perk">🍹 Free Drinks + Merch Bundle</p>
+        <p class="albumrelease__desc">VIP Show ticket (unlimited free drinks) + Ultimate Fan Merch Bundle</p>
+
+        <div class="albumrelease__options">
+          {vipOptionGroups.map((group) => (
+            <div class="albumrelease__optgroup" data-group={group.name}>
+              <span class="albumrelease__optlabel">{group.name}</span>
+              <div class="albumrelease__opts">
+                {group.values.map((value) => (
+                  <button type="button" class="albumrelease__opt" data-value={value} aria-pressed="false">
+                    {value}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button type="button" class="albumrelease__cta albumrelease__cta--btn" data-vip-add data-price={vipPrice} disabled>
+          Select tees &amp; sizes
+        </button>
+      </div>
+
       <button type="button" class="albumrelease__card" data-product="ga-plus" data-price={gaPlusPrice}>
         <span class="albumrelease__imgstack">
           {gaPlusImg && <img src={gaPlusImg} alt="Album Release Show Poster" class="albumrelease__img" />}
@@ -88,11 +135,14 @@ const gaPlusImg = urlForWidth(gaPlus?.images?.[0], 900);
 <script>
   import { addItem } from '../lib/cart';
 
-  const GA_PRODUCT_ID = 'albumrelease-ga';
+  const VIP_PRODUCT_ID = 'b351d11f-4c78-4a1f-b36b-c10d951c96ea';
   const GA_PLUS_PRODUCT_ID = 'albumrelease-ga-plus';
+  const GA_PRODUCT_ID = 'albumrelease-ga';
 
-  const cardImage = (root: Element): string | undefined =>
-    root.querySelector('img')?.getAttribute('src') ?? undefined;
+  const cardImage = (root: Element): string | undefined => {
+    const imgs = root.querySelectorAll('img');
+    return imgs[imgs.length - 1]?.getAttribute('src') ?? undefined;
+  };
 
   // GA+ — no options to pick (no merch), so it goes straight to checkout,
   // same as the original bundle's frictionless path.
@@ -110,8 +160,7 @@ const gaPlusImg = urlForWidth(gaPlus?.images?.[0], 900);
     window.location.href = '/checkout';
   });
 
-  // GA — plain ticket, nudges to merch before checkout (matching the existing
-  // ticket-only flow on /releaseparty).
+  // GA — plain ticket, nudges to merch before checkout.
   const gaCard = document.querySelector<HTMLButtonElement>('[data-product="ga"]');
   gaCard?.addEventListener('click', () => {
     addItem({
@@ -127,11 +176,58 @@ const gaPlusImg = urlForWidth(gaPlus?.images?.[0], 900);
     sessionStorage.setItem('wtn_promo', 'WTN15OFF');
     window.location.href = '/merch';
   });
+
+  // VIP bundle — the tee + size must be chosen before the CTA unlocks.
+  const vipCard = document.querySelector<HTMLElement>('.albumrelease__card--bundle');
+  if (vipCard) {
+    const addBtn = vipCard.querySelector<HTMLButtonElement>('[data-vip-add]');
+    const groups = [...vipCard.querySelectorAll<HTMLElement>('.albumrelease__optgroup')];
+    const choices: Record<string, string> = {};
+
+    const groupName = (g: HTMLElement) => g.dataset.group ?? '';
+    const allChosen = () => groups.every((g) => choices[groupName(g)]);
+
+    const refresh = () => {
+      if (!addBtn) return;
+      const ready = allChosen();
+      addBtn.disabled = !ready;
+      addBtn.textContent = ready ? 'Add to Cart →' : 'Select your tees & sizes';
+    };
+
+    for (const g of groups) {
+      const name = groupName(g);
+      const opts = [...g.querySelectorAll<HTMLButtonElement>('.albumrelease__opt')];
+      for (const btn of opts) {
+        btn.addEventListener('click', () => {
+          choices[name] = btn.dataset.value ?? '';
+          for (const b of opts) b.setAttribute('aria-pressed', String(b === btn));
+          refresh();
+        });
+      }
+    }
+
+    addBtn?.addEventListener('click', () => {
+      if (!allChosen()) return;
+      const options = groups.map((g) => ({ name: groupName(g), value: choices[groupName(g)] }));
+      addItem({
+        productId: VIP_PRODUCT_ID,
+        slug: 'superfans',
+        title: 'VIP Fan Experience',
+        sku: 'superfans',
+        unitPrice: Number(addBtn.dataset.price) || 0,
+        qty: 1,
+        image: cardImage(vipCard),
+        options,
+      });
+      // VIP buyers skip merch browsing entirely — straight to checkout.
+      window.location.href = '/checkout';
+    });
+  }
 </script>
 
 <style>
   .albumrelease {
-    max-width: 1100px;
+    max-width: 1300px;
     margin-inline: auto;
     padding: calc(8vh + 4.5rem) 1.5rem 2rem;
     text-align: center;
@@ -167,14 +263,14 @@ const gaPlusImg = urlForWidth(gaPlus?.images?.[0], 900);
   }
   .albumrelease__sub {
     color: var(--muted);
-    max-width: 46ch;
+    max-width: 52ch;
     margin: 0 auto 0.75rem;
     font-size: 0.95rem;
   }
   .albumrelease__note {
     color: var(--accent);
     opacity: 0.85;
-    max-width: 46ch;
+    max-width: 50ch;
     margin: 0 auto 3.5rem;
     font-size: 0.82rem;
   }
@@ -190,13 +286,13 @@ const gaPlusImg = urlForWidth(gaPlus?.images?.[0], 900);
   /* Cards float below the main content and slightly overlap the footer. */
   .albumrelease__cards {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, 1fr);
     gap: 2rem;
     margin-bottom: -70px;
     position: relative;
     z-index: 2;
   }
-  @media (max-width: 720px) {
+  @media (max-width: 900px) {
     .albumrelease__cards {
       grid-template-columns: 1fr;
       margin-bottom: -40px;
@@ -224,8 +320,15 @@ const gaPlusImg = urlForWidth(gaPlus?.images?.[0], 900);
     outline: none;
   }
 
+  /* The VIP bundle card is a container (not a single click target) — its own
+     controls handle clicks, so don't imply the whole card is clickable. */
+  .albumrelease__card--bundle {
+    cursor: default;
+  }
+
   .albumrelease__imgstack {
     display: block;
+    position: relative;
     width: 100%;
     max-width: 320px;
     /* Matches the poster art's real 1728x2304 (3:4) proportions. */
@@ -238,6 +341,22 @@ const gaPlusImg = urlForWidth(gaPlus?.images?.[0], 900);
     object-fit: cover;
     border-radius: calc(var(--radius) - 2px);
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+  }
+  /* VIP card: show poster behind (top-left), merch bundle in front
+     (bottom-right) — same "interlocked" stack /releaseparty used. */
+  .albumrelease__imgstack--double .albumrelease__img {
+    position: absolute;
+    width: 60%;
+    height: 60%;
+  }
+  .albumrelease__img--back {
+    top: 0;
+    left: 0;
+  }
+  .albumrelease__img--front {
+    bottom: 0;
+    right: 0;
+    border: 3px solid var(--bg);
   }
 
   .albumrelease__name {
@@ -281,8 +400,69 @@ const gaPlusImg = urlForWidth(gaPlus?.images?.[0], 900);
     padding: 0.6em 1.4em;
     transition: background-color 0.25s ease, color 0.25s ease;
   }
-  .albumrelease__card:hover .albumrelease__cta {
+  /* Only the plain (GA/GA+) cards fill their CTA on hover. The VIP CTA is a
+     real button with its own hover/disabled states below. */
+  .albumrelease__card:not(.albumrelease__card--bundle):hover .albumrelease__cta {
     background: var(--accent);
     color: var(--accent-ink);
+  }
+
+  /* VIP tee/size selectors. */
+  .albumrelease__options {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    text-align: left;
+  }
+  .albumrelease__optlabel {
+    display: block;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+  .albumrelease__opts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .albumrelease__opt {
+    min-width: 2.8rem;
+    padding: 0.5rem 0.85rem;
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  }
+  .albumrelease__opt:hover {
+    border-color: var(--accent);
+  }
+  .albumrelease__opt[aria-pressed='true'] {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: var(--accent);
+  }
+
+  /* CTA rendered as a <button> on the VIP card. */
+  .albumrelease__cta--btn {
+    background: transparent;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .albumrelease__cta--btn:not(:disabled):hover {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  .albumrelease__cta--btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 </style>
