@@ -78,6 +78,27 @@ const vipOptionGroups = bundleOptionGroupsFor(VIP_PRODUCT_ID) ?? [];
     <p class="albumrelease__note">Tickets are collected at the door on show night; any merch can be picked up at our Merch booth — nothing ships.</p>
 
     <div class="albumrelease__cards">
+      <button type="button" class="albumrelease__card" data-product="ga" data-price={gaPrice}>
+        <span class="albumrelease__imgstack">
+          {gaImg && <img src={gaImg} alt="Album Release Show Poster" class="albumrelease__img" />}
+        </span>
+        <h2 class="albumrelease__name">GA</h2>
+        <p class="albumrelease__price">${gaPrice}</p>
+        <p class="albumrelease__desc">General Admission — Live Show Ticket</p>
+        <span class="albumrelease__cta">Add to Cart →</span>
+      </button>
+
+      <button type="button" class="albumrelease__card" data-product="ga-plus" data-price={gaPlusPrice}>
+        <span class="albumrelease__imgstack">
+          {gaPlusImg && <img src={gaPlusImg} alt="Album Release Show Poster" class="albumrelease__img" />}
+        </span>
+        <h2 class="albumrelease__name">GA+</h2>
+        <p class="albumrelease__price">${gaPlusPrice}</p>
+        <p class="albumrelease__perk">🍹 Free Drinks All Night</p>
+        <p class="albumrelease__desc">Includes the Live Show Ticket</p>
+        <span class="albumrelease__cta">Add to Cart →</span>
+      </button>
+
       <div class="albumrelease__card albumrelease__card--bundle">
         <span class="albumrelease__imgstack albumrelease__imgstack--double">
           {posterImg && <img src={posterImg} alt="Album Release Show Poster" class="albumrelease__img albumrelease__img--back" />}
@@ -107,27 +128,6 @@ const vipOptionGroups = bundleOptionGroupsFor(VIP_PRODUCT_ID) ?? [];
           Select tees &amp; sizes
         </button>
       </div>
-
-      <button type="button" class="albumrelease__card" data-product="ga-plus" data-price={gaPlusPrice}>
-        <span class="albumrelease__imgstack">
-          {gaPlusImg && <img src={gaPlusImg} alt="Album Release Show Poster" class="albumrelease__img" />}
-        </span>
-        <h2 class="albumrelease__name">GA+</h2>
-        <p class="albumrelease__price">${gaPlusPrice}</p>
-        <p class="albumrelease__perk">🍹 Free Drinks All Night</p>
-        <p class="albumrelease__desc">Includes the Live Show Ticket</p>
-        <span class="albumrelease__cta">Add to Cart →</span>
-      </button>
-
-      <button type="button" class="albumrelease__card" data-product="ga" data-price={gaPrice}>
-        <span class="albumrelease__imgstack">
-          {gaImg && <img src={gaImg} alt="Album Release Show Poster" class="albumrelease__img" />}
-        </span>
-        <h2 class="albumrelease__name">GA</h2>
-        <p class="albumrelease__price">${gaPrice}</p>
-        <p class="albumrelease__desc">General Admission — Live Show Ticket</p>
-        <span class="albumrelease__cta">Add to Cart →</span>
-      </button>
     </div>
   </section>
 </BaseLayout>
