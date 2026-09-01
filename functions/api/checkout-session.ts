@@ -62,8 +62,12 @@ export const onRequestGet = async (context: { request: Request; env: Env }): Pro
   const session = (await res.json()) as {
     status?: string;
     payment_status?: string;
+    amount_total?: number;
+    currency?: string;
     customer_details?: { email?: string };
-    line_items?: { data?: Array<{ price?: { product?: { metadata?: { productId?: string } } } }> };
+    line_items?: {
+      data?: Array<{ quantity?: number; price?: { product?: { metadata?: { productId?: string } } } }>;
+    };
     error?: { message?: string };
   };
   if (!res.ok) {
@@ -87,11 +91,23 @@ export const onRequestGet = async (context: { request: Request; env: Env }): Pro
     }
   }
 
+  // Purchase-event payload for the Meta Pixel on the return page.
+  const lineItems = session.line_items?.data ?? [];
+  const contentIds = lineItems
+    .map((li) => li.price?.product?.metadata?.productId)
+    .filter((id): id is string => !!id);
+  const numItems = lineItems.reduce((n, li) => n + (li.quantity ?? 1), 0);
+
   return json({
     status: session.status ?? 'open',
     paymentStatus: session.payment_status ?? null,
     email: session.customer_details?.email ?? null,
     hasTicket,
     ticket,
+    // Stripe reports minor units; Meta wants a decimal amount.
+    amountTotal: typeof session.amount_total === 'number' ? session.amount_total / 100 : null,
+    currency: (session.currency ?? 'usd').toUpperCase(),
+    contentIds,
+    numItems,
   });
 };

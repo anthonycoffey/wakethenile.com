@@ -9,6 +9,48 @@ interface Ticket {
   admits: number;
 }
 
+/**
+ * Fire the Meta Pixel Purchase event exactly once per Stripe session.
+ *
+ * The Stripe session id doubles as the Meta event_id: refreshes are guarded
+ * by sessionStorage, and if one slips through anyway Meta deduplicates events
+ * sharing an event_id for 48 hours. Without this a single buyer who reloads
+ * the thank-you page is counted as two sales.
+ */
+function trackPurchase(sessionId: string, data: {
+  amountTotal?: number | null;
+  currency?: string;
+  contentIds?: string[];
+  numItems?: number;
+}) {
+  if (typeof window === 'undefined') return;
+  const fbq = (window as unknown as { fbq?: (...a: unknown[]) => void }).fbq;
+  if (typeof fbq !== 'function') return;
+  if (!data.amountTotal) return;
+
+  const key = `fb_purchase_${sessionId}`;
+  try {
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, '1');
+  } catch {
+    // Private mode / storage blocked — the event_id below still dedupes.
+  }
+
+  fbq(
+    'track',
+    'Purchase',
+    {
+      value: data.amountTotal,
+      currency: data.currency ?? 'USD',
+      content_type: 'product',
+      content_ids: data.contentIds ?? [],
+      num_items: data.numItems ?? 1,
+      order_id: sessionId,
+    },
+    { eventID: sessionId },
+  );
+}
+
 export default function CheckoutReturn() {
   const [status, setStatus] = useState<Status>('loading');
   const [email, setEmail] = useState<string | null>(null);
@@ -29,6 +71,10 @@ export default function CheckoutReturn() {
         email?: string | null;
         hasTicket?: boolean;
         ticket?: Ticket | null;
+        amountTotal?: number | null;
+        currency?: string;
+        contentIds?: string[];
+        numItems?: number;
         error?: string;
       }>;
 
@@ -44,6 +90,7 @@ export default function CheckoutReturn() {
         setHasTicket(!!data.hasTicket);
         setStatus('complete');
         clearCart();
+        trackPurchase(sessionId, data);
 
         // Ticket orders: the ticketCode is written by the webhook a beat later,
         // so poll briefly until it appears, then show the QR.
