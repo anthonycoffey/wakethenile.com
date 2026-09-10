@@ -50,7 +50,7 @@ export const onRequestGet = async (context: { request: Request; env: Env }): Pro
   try {
     rows = await sanityQuery(
       env,
-      `*[_type == "order" && defined(ticketCode)] | order(customerName asc){
+      `*[_type == "order" && defined(ticketCode)] | order(coalesce(createdAt, _createdAt) desc){
         "name": customerName, email, "tier": ticketTier, admits, checkedInAt, ticketCode
       }`,
     );
