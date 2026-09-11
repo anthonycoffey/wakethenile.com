@@ -15,9 +15,30 @@ export const order = defineType({
       name: 'fulfillmentStatus',
       title: 'Fulfillment',
       type: 'string',
-      options: {list: ['unfulfilled', 'fulfilled', 'cancelled'], layout: 'radio'},
+      options: {list: ['unfulfilled', 'fulfilled', 'cancelled', 'refunded'], layout: 'radio'},
       initialValue: 'unfulfilled',
     }),
+    defineField({
+      name: 'channel',
+      title: 'Sold via',
+      type: 'string',
+      readOnly: true,
+      options: {list: ['web', 'booth'], layout: 'radio'},
+      description: 'web = online store checkout. booth = in-person sale on a Stripe Reader M2.',
+    }),
+
+    // --- Refunds. Set by the Stripe webhook on a FULL refund: the order is
+    // kept for the record, stock is added back, and every door surface
+    // (/attendees, /ticket, /api/checkin) treats it as void. Partial refunds
+    // are deliberately not automated — reverse those by hand. ---
+    defineField({
+      name: 'refundedAt',
+      title: 'Refunded at',
+      type: 'datetime',
+      readOnly: true,
+      description: 'Set = fully refunded. Hidden from /attendees and the QR pass stops working.',
+    }),
+    defineField({name: 'refundedAmount', title: 'Refunded (USD)', type: 'number', readOnly: true}),
     defineField({name: 'email', title: 'Customer email', type: 'string', readOnly: true}),
     defineField({name: 'customerName', title: 'Customer name', type: 'string', readOnly: true}),
 
@@ -46,7 +67,17 @@ export const order = defineType({
       title: 'Checked in at',
       type: 'datetime',
       readOnly: true,
-      description: 'Stamped when scanned at the door. Empty = not yet arrived.',
+      description: 'Stamped on the FIRST arrival. Empty = nobody from this order has arrived.',
+    }),
+    defineField({
+      name: 'admitted',
+      title: 'People admitted',
+      type: 'number',
+      readOnly: true,
+      description:
+        'How many of this ticket\u2019s admits have come through the door. A party can ' +
+        'arrive in waves, so this counts up rather than flipping a switch; the ticket ' +
+        'stops working once it reaches Admits.',
     }),
     defineField({name: 'checkedInBy', title: 'Checked in by', type: 'string', readOnly: true}),
     defineField({
@@ -101,7 +132,14 @@ export const order = defineType({
     defineField({name: 'amountTax', title: 'Tax (USD)', type: 'number', readOnly: true}),
     defineField({name: 'amountTotal', title: 'Total (USD)', type: 'number', readOnly: true}),
     defineField({name: 'currency', title: 'Currency', type: 'string', readOnly: true}),
-    defineField({name: 'promoCode', title: 'Promo code', type: 'string', readOnly: true}),
+    defineField({
+      name: 'promoCode',
+      title: 'Promo code',
+      type: 'string',
+      readOnly: true,
+      description: 'The code the buyer actually redeemed, so campaigns can be measured.',
+    }),
+    defineField({name: 'amountDiscount', title: 'Discount (USD)', type: 'number', readOnly: true}),
     defineField({
       name: 'shippingAddress',
       title: 'Ship to',
@@ -119,6 +157,21 @@ export const order = defineType({
       ],
     }),
     defineField({name: 'stripeSessionId', title: 'Stripe session id', type: 'string', readOnly: true}),
+    defineField({
+      name: 'stripePaymentIntentId',
+      title: 'Stripe payment intent id',
+      type: 'string',
+      readOnly: true,
+      description: 'How a refund event finds its way back to this order.',
+    }),
+    defineField({name: 'stripeChargeId', title: 'Stripe charge id', type: 'string', readOnly: true}),
+    defineField({
+      name: 'terminalSerial',
+      title: 'Reader serial',
+      type: 'string',
+      readOnly: true,
+      description: 'Which M2 took the booth payment. Empty for web orders.',
+    }),
     defineField({name: 'stripeEventId', title: 'Stripe event id', type: 'string', readOnly: true}),
     defineField({name: 'createdAt', title: 'Placed at', type: 'datetime', readOnly: true}),
   ],
@@ -135,14 +188,24 @@ export const order = defineType({
       date: 'createdAt',
       tier: 'ticketTier',
       checkedInAt: 'checkedInAt',
+      channel: 'channel',
+      refundedAt: 'refundedAt',
+      admits: 'admits',
+      admitted: 'admitted',
     },
-    prepare({name, email, total, status, date, tier, checkedInAt}) {
+    prepare({name, email, total, status, date, tier, checkedInAt, channel, refundedAt, admits, admitted}) {
       const when = date ? new Date(date).toLocaleDateString('en-US') : ''
       const tierTag = tier ? ` [${String(tier).toUpperCase()}]` : ''
-      const door = tier ? (checkedInAt ? ' · ✅ checked in' : ' · ⬜ not arrived') : ''
+      const seats = admits ?? 1
+      const inCount = admitted ?? (checkedInAt ? 1 : 0)
+      const door = tier && !refundedAt
+        ? (inCount >= seats ? ` · ✅ ${inCount}/${seats} in` : inCount > 0 ? ` · 🚪 ${inCount}/${seats} in` : ' · ⬜ not arrived')
+        : ''
+      const where = channel === 'booth' ? ' · 🎪 booth' : ''
+      const money = (total ?? 0).toFixed(2)
       return {
-        title: `${name || email || 'Order'} — $${(total ?? 0).toFixed(2)}${tierTag}`,
-        subtitle: `${status ?? 'unfulfilled'}${when ? ` · ${when}` : ''}${door}`,
+        title: `${refundedAt ? '↩︎ ' : ''}${name || email || 'Order'} — $${money}${tierTag}`,
+        subtitle: `${refundedAt ? 'refunded' : (status ?? 'unfulfilled')}${when ? ` · ${when}` : ''}${where}${door}`,
       }
     },
   },

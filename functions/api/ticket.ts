@@ -42,24 +42,33 @@ export const onRequestGet = async (context: { request: Request; env: Env }): Pro
     customerName?: string | null;
     ticketTier?: string | null;
     admits?: number | null;
+    admitted?: number | null;
     checkedInAt?: string | null;
+    refundedAt?: string | null;
+    fulfillmentStatus?: string | null;
   } | null;
   try {
     order = await sanityQuery(
       env,
-      `*[_type == "order" && ticketCode == $code][0]{ customerName, ticketTier, admits, checkedInAt }`,
+      `*[_type == "order" && !(_id in path("drafts.**")) && ticketCode == $code][0]{ customerName, ticketTier, admits, admitted, checkedInAt, refundedAt, fulfillmentStatus }`,
       { code },
     );
   } catch {
     return json({ error: 'Lookup failed.' }, 502);
   }
   if (!order) return json({ error: 'Ticket not found.' }, 404);
+  // A refunded order is no longer a pass. Say so plainly rather than 404ing,
+  // so a buyer who was refunded understands why their QR stopped working.
+  if (order.refundedAt || order.fulfillmentStatus === 'cancelled') {
+    return json({ error: 'This ticket was cancelled and is no longer valid.' }, 410);
+  }
 
   const tier = order.ticketTier === 'vip' || order.ticketTier === 'ga-plus' ? order.ticketTier : 'ga';
   return json({
     name: order.customerName ?? null,
     tier,
-    admits: order.admits ?? 1,
+    admits: Math.max(1, order.admits ?? 1),
+    admitted: Math.max(0, order.admitted ?? (order.checkedInAt ? 1 : 0)),
     checkedInAt: order.checkedInAt ?? null,
   });
 };

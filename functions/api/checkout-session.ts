@@ -83,7 +83,7 @@ export const onRequestGet = async (context: { request: Request; env: Env }): Pro
   if (session.status === 'complete' && hasTicket) {
     const order = await sanityQuery<{ ticketCode?: string; ticketTier?: string; admits?: number }>(
       env,
-      `*[_type == "order" && stripeSessionId == $sid][0]{ ticketCode, ticketTier, admits }`,
+      `*[_type == "order" && !(_id in path("drafts.**")) && stripeSessionId == $sid && !defined(refundedAt)][0]{ ticketCode, ticketTier, admits }`,
       { sid: sessionId },
     );
     if (order?.ticketCode) {

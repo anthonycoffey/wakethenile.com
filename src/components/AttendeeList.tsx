@@ -5,8 +5,10 @@ interface Attendee {
   email: string | null;
   tier: 'ga' | 'vip' | 'ga-plus' | null;
   admits: number | null;
+  admitted: number | null;
   checkedInAt: string | null;
   ticketCode: string | null;
+  channel: 'web' | 'booth' | null;
 }
 type Status = 'locked' | 'loading' | 'ready' | 'error';
 
@@ -57,15 +59,22 @@ export default function AttendeeList() {
 
   const totals = useMemo(() => {
     const admits = rows.reduce((n, r) => n + (r.admits ?? 1), 0);
-    const inCount = rows.filter((r) => r.checkedInAt).length;
-    return { orders: rows.length, admits, inCount };
+    // Count PEOPLE through the door, not orders scanned — a 4-admit ticket
+    // that has let 2 in is 2 people, not 1 and not 4.
+    const inCount = rows.reduce((n, r) => n + (r.admitted ?? (r.checkedInAt ? 1 : 0)), 0);
+    const walkUps = rows.filter((r) => r.channel === 'booth').length;
+    return { orders: rows.length, admits, inCount, walkUps };
   }, [rows]);
 
   function downloadCsv() {
     const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const header = ['Name', 'Email', 'Tier', 'Admits', 'Checked in at', 'Ticket code'];
+    const header = ['Name', 'Email', 'Tier', 'Admits', 'Admitted', 'Sold via', 'First arrival', 'Code (last 6)'];
     const lines = rows.map((r) =>
-      [r.name, r.email, (r.tier ?? 'ga').toUpperCase(), r.admits ?? 1, r.checkedInAt ?? '', r.ticketCode ?? '']
+      [r.name, r.email, (r.tier ?? 'ga').toUpperCase(), r.admits ?? 1,
+       r.admitted ?? (r.checkedInAt ? 1 : 0), r.channel ?? 'web', r.checkedInAt ?? '',
+       // Ticket codes are bearer credentials — a shared CSV would be a
+       // credential dump. Last 6 is enough to reconcile a row by hand.
+       (r.ticketCode ?? '').slice(-6)]
         .map(esc)
         .join(','),
     );
@@ -112,7 +121,8 @@ export default function AttendeeList() {
         <button type="button" className="att__csv" onClick={downloadCsv}>Download CSV</button>
       </div>
       <p className="att__stats">
-        {totals.orders} orders · {totals.admits} admits · <strong>{totals.inCount}</strong> checked in
+        {totals.orders} orders · {totals.admits} admits · <strong>{totals.inCount}</strong> in the room
+        {totals.walkUps > 0 && <> · {totals.walkUps} at the door</>}
       </p>
       <input
         type="search"
@@ -128,7 +138,8 @@ export default function AttendeeList() {
               <th>Name</th>
               <th>Tier</th>
               <th>Admits</th>
-              <th>Status</th>
+              <th>Sold via</th>
+              <th>Door</th>
             </tr>
           </thead>
           <tbody>
@@ -144,12 +155,21 @@ export default function AttendeeList() {
                 </td>
                 <td>{(r.tier ?? 'ga').toUpperCase()}</td>
                 <td>{r.admits ?? 1}</td>
-                <td>{r.checkedInAt ? `✓ ${fmtTime(r.checkedInAt)}` : '—'}</td>
+                <td>{r.channel === 'booth' ? 'Door' : 'Advance'}</td>
+                <td>
+                  {(() => {
+                    const seats = r.admits ?? 1;
+                    const used = r.admitted ?? (r.checkedInAt ? 1 : 0);
+                    if (!used) return '—';
+                    const label = seats > 1 ? `${used}/${seats} in` : '✓';
+                    return `${label} · ${r.checkedInAt ? fmtTime(r.checkedInAt) : ''}`;
+                  })()}
+                </td>
               </tr>
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={4} className="att__empty">No matching attendees.</td>
+                <td colSpan={5} className="att__empty">No matching attendees.</td>
               </tr>
             )}
           </tbody>

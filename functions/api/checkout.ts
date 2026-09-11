@@ -135,17 +135,32 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
   }
   const items = Array.isArray(body?.items) ? body.items : [];
   if (items.length === 0) return json({ error: 'Your cart is empty.' }, 400);
+  // Stripe caps a session at 100 line items; stop well short so an oversized
+  // cart fails fast here instead of after two Sanity round-trips.
+  if (items.length > 50) return json({ error: 'That cart is too large — please split the order.' }, 400);
 
   const ids = [...new Set(items.map((i) => i.productId).filter(Boolean))];
   let products: any[];
   let settings: any;
+  let settingsFailed = false;
   try {
     [products, settings] = await Promise.all([
       sanityQuery<any[]>(env, PRODUCTS_QUERY, { ids }),
-      sanityQuery<any>(env, SETTINGS_QUERY, {}).catch(() => null),
+      sanityQuery<any>(env, SETTINGS_QUERY, {}).catch((e) => {
+        settingsFailed = true;
+        console.error('[checkout] settings fetch failed:', e);
+        return null;
+      }),
     ]);
   } catch {
     return json({ error: 'Could not load products.' }, 502);
+  }
+  // Shipping rates, tax and currency all live in settings. Falling back to
+  // built-in defaults would quietly under-charge shipping and skip sales tax
+  // on every order placed during the outage, with nothing in the logs to
+  // reconcile afterwards. Fail closed instead.
+  if (settingsFailed) {
+    return json({ error: 'Could not start checkout — please try again in a moment.' }, 503);
   }
 
   // Honour the storefront master switch. `storeEnabled === false` is the only
@@ -164,22 +179,49 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
     ? settings.allowedShippingCountries
     : DEFAULTS.countries;
 
+  // Stock has to be checked against the TOTAL quantity of each sku in the
+  // cart, not per line. The cart keys lines by sku + chosen options, so the
+  // same sku legitimately appears more than once (e.g. two bundles with
+  // different tee choices) and a per-line check would let each one through.
+  const normQty = (q: unknown) => Math.max(1, Math.floor(Number(q) || 1));
+  // Resolve the sku against the real product before using it as the bucket
+  // identity. Keying on the raw client string let a variant-less product be
+  // split across as many buckets as the caller invented sku strings, and each
+  // bucket got its own full stock allowance.
+  const bucketKey = (it: IncomingItem) => {
+    const p = byId.get(it.productId);
+    const v = (p?.variants || []).find((x: any) => x.sku === it.sku);
+    return `${it.productId}::${v?.sku ?? ''}`;
+  };
+  const qtyBySku = new Map<string, number>();
+  for (const it of items) {
+    qtyBySku.set(bucketKey(it), (qtyBySku.get(bucketKey(it)) ?? 0) + normQty(it.qty));
+  }
+
   const line_items: Record<string, unknown>[] = [];
   for (const item of items) {
     const p = byId.get(item.productId);
     if (!p) {
-      return json({ error: `"${p?.title || 'An item'}" is no longer available.` }, 409);
+      return json({ error: 'An item in your cart is no longer available.' }, 409);
     }
     const variant = (p.variants || []).find((v: any) => v.sku === item.sku);
+    // A variant product with an unmatched sku would silently fall back to the
+    // base price and base stock — both of which go stale once sizes exist.
+    if ((p.variants || []).length > 0 && !variant) {
+      return json({ error: `"${p.title}" — that option is no longer available.` }, 409);
+    }
     const unit: number = variant ? (variant.price ?? p.price) : p.price;
     // Stock is authoritative: no variants → base stock; else the variant's. 0 = sold out.
     const stock: number = variant ? (variant.stock ?? 0) : (p.stock ?? 0);
-    const qty = Math.max(1, Math.floor(Number(item.qty) || 1));
+    const qty = normQty(item.qty);
+    const cartQty = qtyBySku.get(bucketKey(item)) ?? qty;
     const which = variant?.label ? `${p.title} — ${variant.label}` : p.title;
 
     if (!unit || unit <= 0) return json({ error: `"${p.title}" is not purchasable.` }, 409);
     if (stock <= 0) return json({ error: `"${which}" is sold out.` }, 409);
-    if (stock < qty) return json({ error: `Only ${stock} of "${which}" left in stock.` }, 409);
+    if (stock < cartQty) {
+      return json({ error: `Only ${stock} of "${which}" left in stock.` }, 409);
+    }
 
     // Bundle tee/size: rebuild the options from our allow-list (never trust the
     // raw client strings) so a required choice can't be skipped or spoofed.
@@ -217,7 +259,9 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
         ? ` — ${cleanOptions.map((o) => o.value).join(' / ')}`
         : '';
       const baseName = variant?.label ? `${p.title} — ${variant.label}` : p.title;
-      const metadata: Record<string, string> = { productId: p._id, sku: item.sku || '' };
+      // Server-resolved sku only. The client's string is a lookup key, never a
+      // value we persist — the webhook treats this metadata as authoritative.
+      const metadata: Record<string, string> = { productId: p._id, sku: variant?.sku ?? '' };
       if (cleanOptions?.length) metadata.optionsJson = JSON.stringify(cleanOptions);
 
       const product_data: Record<string, unknown> = {
@@ -244,19 +288,12 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
     return { shipping_rate_data };
   });
 
-  // If the cart contains a live-show ticket or the superfan bundle, offer a
-  // free "pick up at the show" option below the standard shipping choices.
-  const hasPickupEligibleItem = items.some((i) => PICKUP_ELIGIBLE_PRODUCT_IDS.has(i.productId));
-  if (hasPickupEligibleItem) {
-    shipping_options.push({
-      shipping_rate_data: {
-        type: 'fixed_amount',
-        display_name: 'Pick up at Merch booth (show day)',
-        fixed_amount: { amount: 0, currency },
-        tax_behavior: 'exclusive',
-      },
-    });
-  }
+  // Free "pick up at the show" is NOT offered on a mixed cart. It used to be
+  // pushed whenever ANY line was pickup-eligible, so a single ticket bought
+  // alongside merch made shipping free for the whole order — while the
+  // confirmation email still promised to post it. A cart that is entirely
+  // collectable takes the `allPickup` branch below, which skips shipping
+  // altogether; anything else pays a real rate.
 
   // A pickup-only cart (every line is a ticket / show-pickup bundle) ships
   // nothing — so we skip the shipping address + options entirely. The storefront
@@ -291,10 +328,23 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
     },
     body: new URLSearchParams(formEncode(params)).toString(),
   });
-  const session = (await res.json()) as { client_secret?: string; error?: { message?: string } };
+  // Stripe can return a non-JSON body (edge 502/503). Parsing before checking
+  // res.ok would throw past every handler and leave no log to debug from.
+  const raw = await res.text();
+  let session: { client_secret?: string; error?: { message?: string } } = {};
+  try {
+    session = JSON.parse(raw);
+  } catch {
+    console.error('[checkout] Stripe returned non-JSON:', res.status, raw.slice(0, 500));
+    return json({ error: 'Could not start checkout — please try again.' }, 502);
+  }
   if (!res.ok) {
-    console.error('[checkout] Stripe error:', session?.error);
+    console.error('[checkout] Stripe error:', res.status, session?.error);
     return json({ error: session?.error?.message || 'Could not start checkout.' }, 502);
+  }
+  if (!session.client_secret) {
+    console.error('[checkout] Stripe returned no client_secret:', raw.slice(0, 500));
+    return json({ error: 'Could not start checkout — please try again.' }, 502);
   }
   return json({ clientSecret: session.client_secret });
 };

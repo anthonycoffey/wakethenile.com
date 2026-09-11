@@ -1,8 +1,9 @@
 /**
  * Cloudflare Pages Function — GET /api/attendees   (header: x-staff-pin)
  *
- * Staff-only. Returns every ticket/bundle order (name, email, tier, admits,
- * check-in status) for the /attendees page + CSV export. PIN-gated. Edge-native.
+ * Staff-only. Returns every live ticket/bundle order (name, email, tier,
+ * admits, check-in status, sales channel) for the /attendees page + CSV
+ * export. Refunded orders are excluded. PIN-gated. Edge-native.
  */
 interface Env {
   SANITY_PROJECT_ID?: string;
@@ -42,16 +43,19 @@ export const onRequestGet = async (context: { request: Request; env: Env }): Pro
   const { request, env } = context;
   if (!env.STAFF_PIN || !env.SANITY_PROJECT_ID) return json({ error: 'Not configured.' }, 503);
 
-  const pin =
-    request.headers.get('x-staff-pin') || new URL(request.url).searchParams.get('pin') || '';
+  // Header only — a PIN in a query string is written to edge logs, browser
+  // history and outbound Referer headers.
+  const pin = request.headers.get('x-staff-pin') || '';
   if (!pin || !safeEqual(pin, env.STAFF_PIN)) return json({ error: 'Wrong door PIN.' }, 401);
 
   let rows: Array<Record<string, unknown>>;
   try {
     rows = await sanityQuery(
       env,
-      `*[_type == "order" && defined(ticketCode)] | order(coalesce(createdAt, _createdAt) desc){
-        "name": customerName, email, "tier": ticketTier, admits, checkedInAt, ticketCode
+      `*[_type == "order" && !(_id in path("drafts.**")) && defined(ticketCode) && !defined(refundedAt) && fulfillmentStatus != "cancelled"] | order(coalesce(createdAt, _createdAt) desc){
+        "name": customerName, email, "tier": ticketTier, admits,
+        "admitted": coalesce(admitted, select(defined(checkedInAt) => 1, 0)), checkedInAt, ticketCode,
+        "channel": coalesce(channel, "web")
       }`,
     );
   } catch {

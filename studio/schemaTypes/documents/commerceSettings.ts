@@ -96,13 +96,18 @@ export const commerceSettings = defineType({
       title: 'Low-stock threshold',
       type: 'number',
       initialValue: 3,
-      description: 'A low-stock alert fires when a variant drops to this many or fewer.',
+      description:
+        'Email the addresses below when a size drops to this many or fewer after a sale. ' +
+        'Set to 0 to turn low-stock alerts off.',
     }),
     defineField({
       name: 'fromEmail',
       title: 'Order email "from" address',
       type: 'string',
-      description: 'Verified sender for confirmation emails (e.g. shop@wakethenile.com).',
+      description:
+        'Verified sender for ALL store email. Leave this blank and no order confirmation, ' +
+        'no admin alert and no low-stock alert can be sent \u2014 silently. Must be an address ' +
+        'verified with the email provider.',
     }),
     defineField({
       name: 'adminNotificationEmails',
@@ -110,7 +115,16 @@ export const commerceSettings = defineType({
       type: 'array',
       of: [defineArrayMember({type: 'string'})],
       options: {layout: 'tags'},
-      description: 'Who gets new-order and low-stock alerts.',
+      description: 'Who gets low-stock alerts (and new-order alerts, if switched on below).',
+    }),
+    defineField({
+      name: 'alertOnNewOrder',
+      title: 'Email me on every order',
+      type: 'boolean',
+      initialValue: false,
+      description:
+        'Off by default \u2014 a busy night would mean an email per sale. Low-stock alerts are ' +
+        'sent regardless, as long as a threshold and at least one address are set above.',
     }),
   ],
   preview: {prepare: () => ({title: 'Store settings'})},

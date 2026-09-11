@@ -48,7 +48,7 @@ export const pastShowsQuery = `*[_type == "show" && ${NOT_DRAFT} && dateTime(dat
 
 /* ---- Merch / commerce ---- */
 
-const VARIANT = `{ label, sku, price, stock }`;
+const VARIANT = `{ label, sku, price, "stock": coalesce(stock, 0) }`;
 
 // A product is live when it's published (unpublish/delete to pull it) and
 // in stock. Sold-out is derived: no variants → base stock; else any variant.
@@ -73,7 +73,7 @@ export const allProductsQuery = `*[_type == "product" && ${NOT_DRAFT} && ${NOT_H
   _id, title, "slug": slug.current, images, price,
   "category": category->title, tags,
   variants[]${VARIANT},
-  "fromPrice": coalesce(math::min(variants[].price), price),
+  "fromPrice": coalesce(math::min(variants[]{"p": coalesce(price, ^.price)}.p), price),
   "inStock": ${IN_STOCK}
 }`;
 
@@ -89,7 +89,7 @@ export const allProductSlugsQuery = `*[_type == "product" && ${NOT_DRAFT} && def
 }`;
 
 // Optional cover for the /merch landing (reuses the COVER `page` model).
-export const shopPageQuery = `*[_type == "page" && (slug.current == "merch" || _id == "page-merch")][0]${PAGE}`;
+export const shopPageQuery = `*[_type == "page" && ${NOT_DRAFT} && (slug.current == "merch" || _id == "page-merch")][0]${PAGE}`;
 
 export const commerceSettingsQuery = `*[_type == "commerceSettings" && _id == "commerceSettings"][0]{
   currency, allowedShippingCountries, defaultTaxCode, enableTax, lowStockThreshold, storeEnabled,
@@ -98,10 +98,6 @@ export const commerceSettingsQuery = `*[_type == "commerceSettings" && _id == "c
 }`;
 
 // Server-side authoritative lookup for checkout validation (fresh price + stock).
-export const productsForCheckoutQuery = `*[_type == "product" && ${NOT_DRAFT} && _id in $ids]{
-  _id, title, price, stock, taxCode, "image": images[0],
-  variants[]{ label, sku, price, stock }
-}`;
 
 // Another product's images, by id — used to compose the VIP Fan Experience
 // PDP hero (its own image + the Live Show Ticket's poster image), matching
