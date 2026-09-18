@@ -115,16 +115,17 @@ export const commerceSettings = defineType({
       type: 'array',
       of: [defineArrayMember({type: 'string'})],
       options: {layout: 'tags'},
-      description: 'Who gets low-stock alerts (and new-order alerts, if switched on below).',
+      description: 'Who gets new-order alerts (unless turned off below) and low-stock alerts.',
     }),
     defineField({
       name: 'alertOnNewOrder',
       title: 'Email me on every order',
       type: 'boolean',
-      initialValue: false,
+      initialValue: true,
       description:
-        'Off by default \u2014 a busy night would mean an email per sale. Low-stock alerts are ' +
-        'sent regardless, as long as a threshold and at least one address are set above.',
+        'On by default. Turn off if a busy night would mean an unwanted email per sale \u2014 ' +
+        'low-stock alerts are sent regardless, as long as a threshold and at least one address ' +
+        'are set above.',
     }),
   ],
   preview: {prepare: () => ({title: 'Store settings'})},

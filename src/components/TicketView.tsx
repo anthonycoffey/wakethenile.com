@@ -106,6 +106,7 @@ export default function TicketView() {
         admitted?: number;
         remaining?: number;
         undone?: number;
+        refused?: boolean;
         error?: string;
       };
       if (res.status === 401) {
@@ -125,17 +126,20 @@ export default function TicketView() {
         );
         return;
       }
-      // 409 = the counter says no (all used, or the party is bigger than
-      // what's left). Not a retryable error — show the count, let staff judge.
+      // 409 = the counter says no (all used, the party is bigger than what's
+      // left, or another device just scanned it). Not a retryable error —
+      // show the count, let staff judge. Always sync the count/timestamp;
+      // only the ticket being genuinely used up (`refused: true`) gets the
+      // red DO-NOT-ADMIT treatment — asking for too big a party, or losing a
+      // race to another lane, is a benign "reduce the party size and retry",
+      // not a person to turn away.
       if (res.status === 409) {
-        // A *counted* refusal (the ticket is used up) gets the red treatment.
-        // A bare conflict does not — that's a retry, not a person to turn away.
         if (typeof data.admitted === 'number') {
           setTicket((t) =>
             t ? { ...t, admitted: data.admitted!, checkedInAt: data.checkedInAt ?? t.checkedInAt } : t,
           );
-          setRefused(true);
         }
+        if (data.refused === true) setRefused(true);
         setCheckinMsg(data.error || 'No admissions left on this ticket.');
         return;
       }

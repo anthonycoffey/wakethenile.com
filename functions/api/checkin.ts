@@ -151,15 +151,18 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
 
   const remaining = admits - used;
   if (remaining <= 0) {
+    // Genuinely refused: this ticket has nothing left to give.
     return json({
-      ok: false, admitted: used, remaining: 0, alreadyCheckedIn: true,
+      ok: false, admitted: used, remaining: 0, alreadyCheckedIn: true, refused: true,
       checkedInAt: order.checkedInAt ?? null, ...base,
       error: `All ${admits} already admitted${order.checkedInAt ? ` (first at ${order.checkedInAt})` : ''}.`,
     }, 409);
   }
   if (party > remaining) {
+    // Not a refusal — the ticket is still valid, staff just asked for more
+    // people than are left. The UI must not show this as DO-NOT-ADMIT.
     return json({
-      ok: false, admitted: used, remaining, alreadyCheckedIn: used > 0,
+      ok: false, admitted: used, remaining, alreadyCheckedIn: used > 0, refused: false,
       checkedInAt: order.checkedInAt ?? null, ...base,
       error: `Only ${remaining} of ${admits} left on this ticket.`,
     }, 409);
@@ -193,9 +196,10 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
     ).catch(() => null);
     if (fresh?.checkedInAt) {
       const nowUsed = fresh.admitted ?? 1;
+      // A lost race, not a refusal — the ticket may well still be good.
       return json({
         ok: false, admitted: nowUsed, remaining: Math.max(0, admits - nowUsed),
-        alreadyCheckedIn: true, checkedInAt: fresh.checkedInAt, ...base,
+        alreadyCheckedIn: true, refused: false, checkedInAt: fresh.checkedInAt, ...base,
         error: 'Another device just scanned this ticket — check the count.',
       }, 409);
     }
