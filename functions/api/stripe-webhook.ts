@@ -339,6 +339,70 @@ async function stockPatches(
 }
 
 /**
+ * After stock has been decremented, check whether any touched variant/product
+ * went negative.
+ *
+ * Nothing reserves stock between the read in `/api/checkout` (before payment)
+ * and the decrement here (after payment) — two buyers checking out for the
+ * last unit at nearly the same moment can both pay before either decrement
+ * lands, and each individual `dec` is atomic but unconditional, so the count
+ * simply goes negative. That gap can't be closed without holding inventory
+ * during checkout (a separate, larger change — see
+ * docs/specs/active/pre-show-hardening.md). This makes the resulting oversell
+ * loud and immediately actionable instead of a silently-drifting number
+ * someone eventually notices during a recount.
+ */
+async function warnIfOversold(
+  env: Env,
+  lines: OrderLine[],
+  orderId: string,
+  preloaded?: any,
+): Promise<void> {
+  const productIds = [...new Set(lines.map((li) => li.productId).filter(Boolean))];
+  if (!productIds.length) return;
+  const rows = await sanityQuery<any[]>(
+    env,
+    `*[_type == "product" && _id in $ids]{ _id, title, stock, variants[]{ sku, label, stock } }`,
+    { ids: productIds },
+  ).catch(() => null);
+  if (!rows) return;
+
+  const oversold: string[] = [];
+  for (const li of lines) {
+    const p = rows.find((r) => r._id === li.productId);
+    if (!p) continue;
+    const variant = (p.variants ?? []).find((v: any) => v.sku && v.sku === li.sku);
+    const stock = variant ? variant.stock : p.stock;
+    if (typeof stock === 'number' && stock < 0) {
+      const name = variant?.label ? `${p.title} — ${variant.label}` : p.title;
+      const entry = `${name} (${stock})`;
+      if (!oversold.includes(entry)) oversold.push(entry);
+    }
+  }
+  if (!oversold.length) return;
+
+  console.error(`[webhook] OVERSOLD on order ${orderId}:`, oversold.join(', '));
+  const settings = preloaded ?? (await sanityQuery<any>(env, SETTINGS_QUERY, {}).catch(() => null));
+  const to: string[] = settings?.adminNotificationEmails ?? [];
+  const from: string | undefined = settings?.fromEmail;
+  // The console.error above already fires unconditionally; the email is
+  // best-effort on top of it.
+  if (!from || to.length === 0) return;
+  // Urgent, not the opt-in per-order alert — never silenced by that toggle.
+  await sendEmail(
+    env,
+    from,
+    to,
+    `⚠️ OVERSOLD — order ${orderId}`,
+    `<h2>This order sold past available stock</h2>
+     <p>Order <strong>${orderId}</strong> pushed stock negative for:</p>
+     <ul>${oversold.map((o) => `<li>${o}</li>`).join('')}</ul>
+     <p>Two buyers likely checked out for the last unit at nearly the same moment. Reconcile
+        inventory by hand and decide whether a buyer needs to be contacted.</p>`,
+  ).catch((e) => console.error('[webhook] oversold alert email failed:', e));
+}
+
+/**
  * Headline tier + admit count for a set of lines.
  *
  * `channel` matters: door-ticket SKUs are only honoured on the booth path.
@@ -510,6 +574,9 @@ async function handleCheckoutCompleted(
   const settings = await sanityQuery<any>(env, SETTINGS_QUERY, {}).catch(() => null);
 
   // Best-effort, never blocks the 200.
+  await warnIfOversold(env, lineItems, orderId, settings).catch((e) =>
+    console.error('[webhook] oversold check failed:', e),
+  );
   await warnLowStock(env, lineItems, settings).catch((e) =>
     console.error('[webhook] low-stock check failed:', e),
   );
@@ -558,8 +625,13 @@ async function handleCheckoutCompleted(
       ${ticketHtml}
       ${closingHtml}`);
   }
-  // Per-order admin mail is opt-in: a busy night is a full inbox.
-  if (admins.length && settings?.alertOnNewOrder === true) {
+  // Opt-out, not opt-in: the live commerceSettings document predates this
+  // field, so `alertOnNewOrder` reads as undefined on it — an opt-in gate
+  // (`=== true`) would silently turn off admin notifications for every
+  // existing store the moment this field was added, with no migration and no
+  // visible signal that anything changed. `!== false` preserves the prior
+  // always-on behavior until someone explicitly flips the new Studio toggle.
+  if (admins.length && settings?.alertOnNewOrder !== false) {
     await sendEmail(env, from, admins, `New order — $${total}`, `
       <h2>New order</h2>
       <p>${orderDoc.customerName ?? ''} (${orderDoc.email ?? ''})</p>
@@ -592,7 +664,13 @@ async function boothLinesFromCharge(env: Env, charge: any): Promise<OrderLine[]>
     const at = entryText.lastIndexOf(':');
     const priceId = (at === -1 ? entryText : entryText.slice(0, at)).trim();
     const qty = Math.max(1, Number(at === -1 ? 1 : entryText.slice(at + 1)) || 1);
-    if (!priceId.startsWith('price_')) continue;
+    if (!priceId.startsWith('price_')) {
+      // A malformed entry inside an otherwise-valid multi-item cart must not
+      // be silently dropped — same reasoning as the catch below: that would
+      // under-decrement stock forever with the 200 stopping Stripe from
+      // retrying. Fail the whole event; the create-lock makes the retry safe.
+      throw new Error(`booth cart entry unparseable: "${entryText}" (charge ${charge.id})`);
+    }
     try {
       const price = await stripeGet(env, `prices/${encodeURIComponent(priceId)}?expand[]=product`);
       const meta = price.product?.metadata ?? {};
@@ -690,6 +768,9 @@ async function handleBoothCharge(env: Env, event: any): Promise<Response> {
   );
   if (raced) return raced;
 
+  await warnIfOversold(env, lineItems, orderId).catch((e) =>
+    console.error('[webhook] oversold check failed:', e),
+  );
   await warnLowStock(env, lineItems).catch((e) => console.error('[webhook] low-stock check failed:', e));
 
   if (isTicketOrder && ticketTier && orderDoc.email) {
@@ -759,27 +840,46 @@ async function handleRefund(env: Env, event: any): Promise<Response> {
   // Idempotent: a redelivered event must not restock twice.
   if (order.refundedAt) return new Response('already refunded', { status: 200 });
 
-  const raced = await mutateOnce(
-    env,
-    [
-      {
-        patch: {
-          id: order._id,
-          // Pin to the revision we just read: a concurrent redelivery loses
-          // the race and its restock rolls back with it.
-          ...(order._rev ? { ifRevisionID: order._rev } : {}),
-          set: {
-            refundedAt: new Date().toISOString(),
-            refundedAmount: fromCents(refunded),
-            fulfillmentStatus: 'refunded',
+  // Bespoke conflict handling, not the shared `mutateOnce`/`isConflict`: this
+  // patch's `ifRevisionID` can lose a race against an *unrelated* write to the
+  // same order (a door check-in stamping `admitted`, a Studio edit) just as
+  // easily as against a genuine redelivery of this same refund event.
+  // `mutateOnce`'s status-based guess can't tell those apart and would ack
+  // "already refunded" either way, silently dropping a real refund whenever it
+  // guesses wrong. Re-read on conflict and only ack when `refundedAt` is
+  // actually set; otherwise retry against the fresh revision.
+  const restockPatches = await stockPatches(env, (order.lineItems ?? []) as OrderLine[], 'inc');
+  let rev = order._rev;
+  const MAX_ATTEMPTS = 4;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await sanityMutate(env, [
+        {
+          patch: {
+            id: order._id,
+            ...(rev ? { ifRevisionID: rev } : {}),
+            set: {
+              refundedAt: new Date().toISOString(),
+              refundedAmount: fromCents(refunded),
+              fulfillmentStatus: 'refunded',
+            },
           },
         },
-      },
-      ...(await stockPatches(env, (order.lineItems ?? []) as OrderLine[], 'inc')),
-    ],
-    'already refunded',
-  );
-  if (raced) return raced;
+        ...restockPatches,
+      ]);
+      break;
+    } catch (e) {
+      if (!(e instanceof SanityMutateError) || e.status !== 409 || attempt >= MAX_ATTEMPTS) throw e;
+      const fresh = await sanityQuery<{ _rev?: string; refundedAt?: string | null } | null>(
+        env,
+        `*[_type == "order" && _id == $id][0]{ _rev, refundedAt }`,
+        { id: order._id },
+      ).catch(() => null);
+      if (fresh?.refundedAt) return new Response('already refunded', { status: 200 });
+      if (!fresh?._rev) throw e;
+      rev = fresh._rev;
+    }
+  }
 
   // Un-invite the buyer in HubSpot so the CRM matches the door list — unless
   // they still hold another live ticket, in which case restore that tier.
