@@ -46,11 +46,15 @@ export const onRequestGet = async (context: { request: Request; env: Env }): Pro
     checkedInAt?: string | null;
     refundedAt?: string | null;
     fulfillmentStatus?: string | null;
+    breakdown?: { tier: string; admits: number }[] | null;
   } | null;
   try {
     order = await sanityQuery(
       env,
-      `*[_type == "order" && !(_id in path("drafts.**")) && ticketCode == $code][0]{ customerName, ticketTier, admits, admitted, checkedInAt, refundedAt, fulfillmentStatus }`,
+      `*[_type == "order" && !(_id in path("drafts.**")) && ticketCode == $code][0]{
+        customerName, ticketTier, admits, admitted, checkedInAt, refundedAt, fulfillmentStatus,
+        "breakdown": ticketBreakdown[]{tier, admits}
+      }`,
       { code },
     );
   } catch {
@@ -70,5 +74,7 @@ export const onRequestGet = async (context: { request: Request; env: Env }): Pro
     admits: Math.max(1, order.admits ?? 1),
     admitted: Math.max(0, order.admitted ?? (order.checkedInAt ? 1 : 0)),
     checkedInAt: order.checkedInAt ?? null,
+    // Only present when the order mixes tiers — see order.ts `ticketBreakdown`.
+    breakdown: order.breakdown && order.breakdown.length > 1 ? order.breakdown : null,
   });
 };

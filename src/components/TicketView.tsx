@@ -2,6 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { qrSvg } from '../lib/qr';
 
 type Tier = 'ga' | 'vip' | 'ga-plus';
+interface TierBreakdown {
+  tier: Tier;
+  admits: number;
+}
 interface Ticket {
   name: string | null;
   tier: Tier;
@@ -9,7 +13,11 @@ interface Ticket {
   /** How many of `admits` have already come through the door. */
   admitted: number;
   checkedInAt: string | null;
+  // Only set when the order mixes tiers (e.g. one VIP + one GA) — a flattened
+  // "VIP" badge + "Admits 2" would otherwise read as two VIP admissions.
+  breakdown: TierBreakdown[] | null;
 }
+const tierText = (t: Tier) => (t === 'vip' ? 'VIP' : t === 'ga-plus' ? 'GA+' : 'GA');
 type Status = 'loading' | 'ready' | 'notfound' | 'error' | 'void';
 
 const PIN_KEY = 'wtn_staff_pin';
@@ -65,6 +73,7 @@ export default function TicketView() {
           admits: Math.max(1, data.admits ?? 1),
           admitted: Math.max(0, data.admitted ?? 0),
           checkedInAt: data.checkedInAt ?? null,
+          breakdown: Array.isArray(data.breakdown) && data.breakdown.length > 1 ? data.breakdown : null,
         });
         setStatus('ready');
       } catch {
@@ -212,16 +221,27 @@ export default function TicketView() {
   const isVip = ticket.tier === 'vip';
   const isGaPlus = ticket.tier === 'ga-plus';
   const checkedIn = !!ticket.checkedInAt;
+  const isMixed = !!ticket.breakdown;
 
   return (
     <div className={`ticket ${isVip ? 'ticket--vip' : isGaPlus ? 'ticket--ga-plus' : ''}`}>
       <span className={`ticket__badge ${isVip ? 'ticket__badge--vip' : isGaPlus ? 'ticket__badge--ga-plus' : ''}`}>
-        {isVip ? 'VIP · Ultimate Fan' : isGaPlus ? 'GA+ · Free Drinks All Night' : 'General Admission'}
+        {isMixed
+          ? 'Mixed order — see admits'
+          : isVip ? 'VIP · Ultimate Fan' : isGaPlus ? 'GA+ · Free Drinks All Night' : 'General Admission'}
       </span>
       <h1 className="ticket__title">Wake the Nile — Sep 19</h1>
       <p className="ticket__venue">Dwell Coworking Manchaca Auditorium</p>
       {ticket.name && <p className="ticket__name">{ticket.name}</p>}
-      <p className="ticket__admits">Admits {ticket.admits}</p>
+      <p className="ticket__admits">
+        Admits {ticket.admits}
+        {isMixed && (
+          <>
+            {' '}
+            ({ticket.breakdown!.map((b) => `${b.admits}× ${tierText(b.tier)}`).join(' + ')})
+          </>
+        )}
+      </p>
 
       <div className="ticket__qr" aria-label="Ticket QR code" dangerouslySetInnerHTML={{ __html: qr }} />
       <p className="ticket__hint">Show this QR code at the door.</p>

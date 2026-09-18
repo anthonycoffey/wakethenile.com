@@ -348,16 +348,25 @@ async function stockPatches(
 function ticketSummary(
   lines: OrderLine[],
   channel: 'web' | 'booth',
-): { admits: number; tier?: TicketTier } {
+): { admits: number; tier?: TicketTier; breakdown: { tier: TicketTier; admits: number }[] } {
   const tierOf = (li: OrderLine): TicketTier | undefined =>
     TICKET_TIER_BY_PRODUCT_ID[li.productId] ??
     (channel === 'booth'
       ? BOOTH_TICKET_TIER_BY_SKU[(li.sku || '').trim().toUpperCase()]
       : undefined);
-  const admits = lines.filter(tierOf).reduce((n, li) => n + (li.qty ?? 1), 0);
-  if (!admits) return { admits: 0 };
-  const present = new Set(lines.map(tierOf).filter(Boolean) as TicketTier[]);
-  return { admits, tier: TIER_PRIORITY.find((t) => present.has(t)) };
+  const admitsByTier = new Map<TicketTier, number>();
+  for (const li of lines) {
+    const tier = tierOf(li);
+    if (!tier) continue;
+    admitsByTier.set(tier, (admitsByTier.get(tier) ?? 0) + (li.qty ?? 1));
+  }
+  const admits = [...admitsByTier.values()].reduce((n, c) => n + c, 0);
+  if (!admits) return { admits: 0, breakdown: [] };
+  const breakdown = TIER_PRIORITY.filter((t) => admitsByTier.has(t)).map((t) => ({
+    tier: t,
+    admits: admitsByTier.get(t)!,
+  }));
+  return { admits, tier: breakdown[0]?.tier, breakdown };
 }
 
 /* ------------------------------------------------------------------ *
@@ -437,9 +446,13 @@ async function handleCheckoutCompleted(
 
   // Live-show ticketing: if this order includes a ticket/bundle, stamp a QR
   // code + tier + admit count so it becomes a scannable pass at the door.
-  const { admits, tier: ticketTier } = ticketSummary(lineItems, 'web');
+  const { admits, tier: ticketTier, breakdown } = ticketSummary(lineItems, 'web');
   const isTicketOrder = admits > 0;
   const ticketCode = isTicketOrder ? crypto.randomUUID() : undefined;
+  // A cart that mixes tiers (one VIP + one GA, say) would otherwise flatten to
+  // "VIP × 2" at the door — see docs/specs/active/attendees-mixed-tier-breakdown.md.
+  const ticketBreakdown =
+    breakdown.length > 1 ? breakdown.map((b, i) => ({ _key: `tier${i}`, _type: 'object' as const, ...b })) : undefined;
 
   const orderDoc = {
     _id: orderId,
@@ -451,7 +464,7 @@ async function handleCheckoutCompleted(
     // stashes it in session metadata instead.
     customerName: session.customer_details?.name ?? session.metadata?.buyerName ?? ship?.name ?? null,
     lineItems,
-    ...(isTicketOrder ? { ticketTier, admits, ticketCode } : {}),
+    ...(isTicketOrder ? { ticketTier, admits, ticketCode, ...(ticketBreakdown ? { ticketBreakdown } : {}) } : {}),
     amountSubtotal: fromCents(session.amount_subtotal),
     amountShipping: fromCents(session.total_details?.amount_shipping),
     amountTax: fromCents(session.total_details?.amount_tax),
@@ -634,8 +647,10 @@ async function handleBoothCharge(env: Env, event: any): Promise<Response> {
   if (existing) return new Response('already processed', { status: 200 });
 
   const lineItems = await boothLinesFromCharge(env, charge);
-  const { admits, tier: ticketTier } = ticketSummary(lineItems, 'booth');
+  const { admits, tier: ticketTier, breakdown } = ticketSummary(lineItems, 'booth');
   const isTicketOrder = admits > 0;
+  const ticketBreakdown =
+    breakdown.length > 1 ? breakdown.map((b, i) => ({ _key: `tier${i}`, _type: 'object' as const, ...b })) : undefined;
   // A card-present sale that resolves to no ticket and no Sanity product is a
   // sale the door and the stock count will both miss. Make it findable.
   if (!isTicketOrder && !lineItems.some((li) => li.productId)) {
@@ -653,7 +668,9 @@ async function handleBoothCharge(env: Env, event: any): Promise<Response> {
     // Door buyers get a ticketCode too, so /attendees can link them and the
     // door can check them in the same way as an advance buyer. It is not
     // emailed — they are already standing at the door.
-    ...(isTicketOrder ? { ticketTier, admits, ticketCode: crypto.randomUUID() } : {}),
+    ...(isTicketOrder
+      ? { ticketTier, admits, ticketCode: crypto.randomUUID(), ...(ticketBreakdown ? { ticketBreakdown } : {}) }
+      : {}),
     amountSubtotal: fromCents(charge.amount),
     amountShipping: 0,
     amountTax: 0,
