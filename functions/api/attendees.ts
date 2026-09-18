@@ -55,7 +55,8 @@ export const onRequestGet = async (context: { request: Request; env: Env }): Pro
       `*[_type == "order" && !(_id in path("drafts.**")) && defined(ticketCode) && !defined(refundedAt) && fulfillmentStatus != "cancelled"] | order(coalesce(createdAt, _createdAt) desc){
         "name": customerName, email, "tier": ticketTier, admits,
         "admitted": coalesce(admitted, select(defined(checkedInAt) => 1, 0)), checkedInAt, ticketCode,
-        "channel": coalesce(channel, "web")
+        "channel": coalesce(channel, "web"),
+        "breakdown": ticketBreakdown[]{tier, admits}
       }`,
     );
   } catch {

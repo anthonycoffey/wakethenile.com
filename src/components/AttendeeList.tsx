@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 
+interface TierBreakdown {
+  tier: 'ga' | 'vip' | 'ga-plus';
+  admits: number;
+}
 interface Attendee {
   name: string | null;
   email: string | null;
@@ -9,12 +13,21 @@ interface Attendee {
   checkedInAt: string | null;
   ticketCode: string | null;
   channel: 'web' | 'booth' | null;
+  // Only set when the order mixes tiers (e.g. one VIP + one GA) — otherwise
+  // `tier`/`admits` above already fully describe the order.
+  breakdown: TierBreakdown[] | null;
 }
 type Status = 'locked' | 'loading' | 'ready' | 'error';
 
 const PIN_KEY = 'wtn_staff_pin';
 const fmtTime = (iso: string) =>
   new Date(iso).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' });
+// A mixed cart (one VIP + one GA) reads as "VIP × 2" if we show just the
+// headline tier + summed admits — spell out what's actually in the order.
+const tierLabel = (r: Attendee): string =>
+  r.breakdown && r.breakdown.length > 1
+    ? r.breakdown.map((b) => `${b.admits}× ${b.tier.toUpperCase()}`).join(' + ')
+    : (r.tier ?? 'ga').toUpperCase();
 
 export default function AttendeeList() {
   const [status, setStatus] = useState<Status>('locked');
@@ -70,7 +83,7 @@ export default function AttendeeList() {
     const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const header = ['Name', 'Email', 'Tier', 'Admits', 'Admitted', 'Sold via', 'First arrival', 'Code (last 6)'];
     const lines = rows.map((r) =>
-      [r.name, r.email, (r.tier ?? 'ga').toUpperCase(), r.admits ?? 1,
+      [r.name, r.email, tierLabel(r), r.admits ?? 1,
        r.admitted ?? (r.checkedInAt ? 1 : 0), r.channel ?? 'web', r.checkedInAt ?? '',
        // Ticket codes are bearer credentials — a shared CSV would be a
        // credential dump. Last 6 is enough to reconcile a row by hand.
@@ -153,7 +166,7 @@ export default function AttendeeList() {
                   )}
                   {r.email && r.name && <span className="att__email">{r.email}</span>}
                 </td>
-                <td>{(r.tier ?? 'ga').toUpperCase()}</td>
+                <td>{tierLabel(r)}</td>
                 <td>{r.admits ?? 1}</td>
                 <td>{r.channel === 'booth' ? 'Door' : 'Advance'}</td>
                 <td>

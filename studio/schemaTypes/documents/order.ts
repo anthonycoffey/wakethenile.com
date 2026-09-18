@@ -56,6 +56,30 @@ export const order = defineType({
     }),
     defineField({name: 'admits', title: 'Admits (# people)', type: 'number', readOnly: true}),
     defineField({
+      name: 'ticketBreakdown',
+      title: 'Ticket breakdown',
+      type: 'array',
+      readOnly: true,
+      description:
+        'Only set when a single order mixes ticket tiers (e.g. one VIP + one GA). ' +
+        '`ticketTier`/`admits` above stay the flattened headline (best tier, total admits) ' +
+        'for existing door-scan logic; this is what /attendees and the ticket page show ' +
+        'so the door doesn’t read a mixed cart as N of the headline tier.',
+      of: [
+        defineArrayMember({
+          type: 'object',
+          fields: [
+            {name: 'tier', type: 'string', title: 'Tier'},
+            {name: 'admits', type: 'number', title: 'Admits'},
+          ],
+          preview: {
+            select: {tier: 'tier', admits: 'admits'},
+            prepare: ({tier, admits}) => ({title: `${admits}× ${String(tier).toUpperCase()}`}),
+          },
+        }),
+      ],
+    }),
+    defineField({
       name: 'ticketCode',
       title: 'Ticket code',
       type: 'string',
