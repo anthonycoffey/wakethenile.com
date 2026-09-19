@@ -1,0 +1,62 @@
+---
+// "Early bird tickets sold out" notice, shown wherever a visitor could
+// otherwise expect to buy a ticket online. Renders nothing once sales reopen
+// (see EARLY_BIRD_SOLD_OUT in src/lib/tickets.ts).
+import { EARLY_BIRD_SOLD_OUT } from '../lib/tickets';
+---
+
+{
+  EARLY_BIRD_SOLD_OUT && (
+    <div class="eb-banner" role="status">
+      <span class="eb-banner__badge">Sold out</span>
+      <p class="eb-banner__text">
+        <strong>Early bird tickets are sold out.</strong>
+        <span class="eb-banner__sub">Tickets are now available at the door only.</span>
+      </p>
+    </div>
+  )
+}
+
+<style>
+  .eb-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    width: calc(100% - 2rem);
+    max-width: 44rem;
+    margin: 0 auto 1.5rem;
+    padding: 0.9rem 1.25rem;
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-radius: var(--radius);
+    text-align: center;
+  }
+  .eb-banner__badge {
+    background: var(--accent-ink);
+    color: var(--accent);
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding: 0.35em 0.9em;
+    border-radius: 100px;
+  }
+  .eb-banner__text {
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.35;
+  }
+  .eb-banner__sub {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  @media (min-width: 640px) {
+    .eb-banner__sub {
+      display: inline;
+      margin-left: 0.4em;
+    }
+  }
+</style>

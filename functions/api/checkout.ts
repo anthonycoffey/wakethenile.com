@@ -24,6 +24,14 @@ const PICKUP_ELIGIBLE_PRODUCT_IDS = new Set([
   'albumrelease-ga-plus', // GA Plus (/albumrelease)
 ]);
 
+// Early bird ticket kill switch. MIRRORS EARLY_BIRD_SOLD_OUT in
+// src/lib/tickets.ts (separate Workers bundle — flip both together). While
+// true, any cart line for a PICKUP_ELIGIBLE product (every one of them carries
+// a ticket) is refused. Enforced here, not just in the UI, so stale carts,
+// direct API calls, and a refund restocking a ticket back above zero in Sanity
+// can't reopen online sales. Door tickets are sold on the booth Stripe Reader.
+const EARLY_BIRD_SOLD_OUT = true;
+
 // Required tee/size selections for the bundle products. MIRRORS
 // src/lib/bundleOptions.ts (this runs in a separate Workers bundle and can't
 // import it — keep the two in sync). Validation here is authoritative; the
@@ -138,6 +146,16 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
   // Stripe caps a session at 100 line items; stop well short so an oversized
   // cart fails fast here instead of after two Sanity round-trips.
   if (items.length > 50) return json({ error: 'That cart is too large — please split the order.' }, 400);
+
+  if (EARLY_BIRD_SOLD_OUT && items.some((i) => PICKUP_ELIGIBLE_PRODUCT_IDS.has(i.productId))) {
+    return json(
+      {
+        error:
+          'Early bird tickets are sold out — tickets are now available at the door only. Remove the ticket from your cart to check out with the rest of your order.',
+      },
+      409,
+    );
+  }
 
   const ids = [...new Set(items.map((i) => i.productId).filter(Boolean))];
   let products: any[];
