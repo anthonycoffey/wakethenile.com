@@ -7,6 +7,7 @@ import { sanityFetch } from '../lib/sanity';
 import { allProductsQuery } from '../lib/queries';
 import { urlForWidth } from '../lib/sanityImage';
 import { getStoreStatus } from '../lib/store';
+import { EARLY_BIRD_SOLD_OUT, TICKET_PRODUCT_IDS } from '../lib/tickets';
 import type { ProductCardData } from '../lib/types';
 
 const { open, settings } = await getStoreStatus();
@@ -25,7 +26,11 @@ if (open) {
     products.find((p) => p._id === TICKET_PRODUCT_ID)?.images?.[0],
     800,
   );
-  items = products.map((p) => ({
+  // With online ticket sales closed, the ticket tiers (GA, GA+, and the VIP
+  // Fan Experience, which bundles a ticket) leave the store; the standalone
+  // Ultimate Fan Merch Bundle and all other merch stay.
+  const catalog = EARLY_BIRD_SOLD_OUT ? products.filter((p) => !TICKET_PRODUCT_IDS.has(p._id)) : products;
+  items = catalog.map((p) => ({
     id: p._id,
     slug: p.slug ?? '',
     title: p.title ?? '',

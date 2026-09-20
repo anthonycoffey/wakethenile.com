@@ -13,6 +13,7 @@ import { urlForWidth } from '../../lib/sanityImage';
 import { renderPortableText } from '../../lib/portableText';
 import { getStoreStatus } from '../../lib/store';
 import { bundleOptionGroupsFor } from '../../lib/bundleOptions';
+import { EARLY_BIRD_SOLD_OUT, TICKET_PRODUCT_IDS } from '../../lib/tickets';
 import type { Product } from '../../lib/types';
 
 // Live Show Ticket — mirrors the id used across checkout/webhook. Its variant
@@ -38,6 +39,12 @@ const product = open
 
 if (open && !product) {
   return Astro.redirect('/merch');
+}
+
+// Ticket products are no longer sold online; send anyone with an old link to
+// the page that explains door sales.
+if (EARLY_BIRD_SOLD_OUT && product && TICKET_PRODUCT_IDS.has(product._id)) {
+  return Astro.redirect('/albumrelease');
 }
 
 const gallery = product

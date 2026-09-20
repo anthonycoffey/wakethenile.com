@@ -13,6 +13,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import { sanityFetch } from '../lib/sanity';
 import { urlForWidth } from '../lib/sanityImage';
 import { bundleOptionGroupsFor } from '../lib/bundleOptions';
+import EarlyBirdBanner from '../components/EarlyBirdBanner.astro';
+import { EARLY_BIRD_SOLD_OUT } from '../lib/tickets';
 
 interface PresaleProduct {
   id: string;
@@ -61,7 +63,11 @@ const vipOptionGroups = bundleOptionGroupsFor(VIP_PRODUCT_ID) ?? [];
 
 <BaseLayout
   title="Album Release Presale"
-  description="Get tickets to our first live show — September 19th at Dwell Coworking Manchaca Auditorium."
+  description={
+    EARLY_BIRD_SOLD_OUT
+      ? 'Early bird tickets are sold out — tickets are available at the door for our first live show, September 19th at Dwell Coworking Manchaca Auditorium.'
+      : 'Get tickets to our first live show — September 19th at Dwell Coworking Manchaca Auditorium.'
+  }
   footer="scroll"
 >
   <section class="albumrelease">
@@ -70,25 +76,44 @@ const vipOptionGroups = bundleOptionGroupsFor(VIP_PRODUCT_ID) ?? [];
       <span class="albumrelease__title-date">September 19</span>
       <span class="albumrelease__title-venue">@ Dwell Coworking Manchaca Auditorium</span>
     </h1>
-    <p class="albumrelease__sub">
-      Pick your tier below. GA is General Admission entry — GA+ throws in
-      <span class="albumrelease__highlight">🍹 free drinks, all night long</span> — or go all-in with the
-      VIP Fan Experience for free drinks plus the Ultimate Fan Merch Bundle.
-    </p>
-    <p class="albumrelease__note">Tickets are collected at the door on show night; any merch can be picked up at our Merch booth — nothing ships.</p>
+    <EarlyBirdBanner />
+    {EARLY_BIRD_SOLD_OUT ? (
+      <p class="albumrelease__note">Merch is on sale at our Merch booth at the show.</p>
+    ) : (
+      <>
+        <p class="albumrelease__sub">
+          Pick your tier below. GA is General Admission entry — GA+ throws in
+          <span class="albumrelease__highlight">🍹 free drinks, all night long</span> — or go all-in with the
+          VIP Fan Experience for free drinks plus the Ultimate Fan Merch Bundle.
+        </p>
+        <p class="albumrelease__note">Tickets are collected at the door on show night; any merch can be picked up at our Merch booth — nothing ships.</p>
+      </>
+    )}
 
     <div class="albumrelease__cards">
-      <button type="button" class="albumrelease__card" data-product="ga" data-price={gaPrice}>
+      <button
+        type="button"
+        class:list={['albumrelease__card', { 'albumrelease__card--soldout': EARLY_BIRD_SOLD_OUT }]}
+        data-product="ga"
+        data-price={gaPrice}
+        disabled={EARLY_BIRD_SOLD_OUT}
+      >
         <span class="albumrelease__imgstack">
           {gaImg && <img src={gaImg} alt="Album Release Show Poster" class="albumrelease__img" />}
         </span>
         <h2 class="albumrelease__name">GA</h2>
         <p class="albumrelease__price">${gaPrice}</p>
         <p class="albumrelease__desc">General Admission — Live Show Ticket</p>
-        <span class="albumrelease__cta">Add to Cart →</span>
+        <span class="albumrelease__cta">{EARLY_BIRD_SOLD_OUT ? 'Sold Out' : 'Add to Cart →'}</span>
       </button>
 
-      <button type="button" class="albumrelease__card" data-product="ga-plus" data-price={gaPlusPrice}>
+      <button
+        type="button"
+        class:list={['albumrelease__card', { 'albumrelease__card--soldout': EARLY_BIRD_SOLD_OUT }]}
+        data-product="ga-plus"
+        data-price={gaPlusPrice}
+        disabled={EARLY_BIRD_SOLD_OUT}
+      >
         <span class="albumrelease__imgstack">
           {gaPlusImg && <img src={gaPlusImg} alt="Album Release Show Poster" class="albumrelease__img" />}
         </span>
@@ -96,10 +121,16 @@ const vipOptionGroups = bundleOptionGroupsFor(VIP_PRODUCT_ID) ?? [];
         <p class="albumrelease__price">${gaPlusPrice}</p>
         <p class="albumrelease__perk">🍹 Free Drinks All Night</p>
         <p class="albumrelease__desc">Includes the Live Show Ticket</p>
-        <span class="albumrelease__cta">Add to Cart →</span>
+        <span class="albumrelease__cta">{EARLY_BIRD_SOLD_OUT ? 'Sold Out' : 'Add to Cart →'}</span>
       </button>
 
-      <div class="albumrelease__card albumrelease__card--bundle">
+      <div
+        class:list={[
+          'albumrelease__card',
+          'albumrelease__card--bundle',
+          { 'albumrelease__card--soldout': EARLY_BIRD_SOLD_OUT },
+        ]}
+      >
         <span class="albumrelease__imgstack albumrelease__imgstack--double">
           {posterImg && <img src={posterImg} alt="Album Release Show Poster" class="albumrelease__img albumrelease__img--back" />}
           {vipImg && <img src={vipImg} alt="Ultimate Fan Merch Bundle" class="albumrelease__img albumrelease__img--front" />}
@@ -109,23 +140,25 @@ const vipOptionGroups = bundleOptionGroupsFor(VIP_PRODUCT_ID) ?? [];
         <p class="albumrelease__perk">🍹 Free Drinks + Merch Bundle</p>
         <p class="albumrelease__desc">VIP Show ticket (unlimited free drinks) + Ultimate Fan Merch Bundle</p>
 
-        <div class="albumrelease__options">
-          {vipOptionGroups.map((group) => (
-            <div class="albumrelease__optgroup" data-group={group.name}>
-              <span class="albumrelease__optlabel">{group.name}</span>
-              <div class="albumrelease__opts">
-                {group.values.map((value) => (
-                  <button type="button" class="albumrelease__opt" data-value={value} aria-pressed="false">
-                    {value}
-                  </button>
-                ))}
+        {!EARLY_BIRD_SOLD_OUT && (
+          <div class="albumrelease__options">
+            {vipOptionGroups.map((group) => (
+              <div class="albumrelease__optgroup" data-group={group.name}>
+                <span class="albumrelease__optlabel">{group.name}</span>
+                <div class="albumrelease__opts">
+                  {group.values.map((value) => (
+                    <button type="button" class="albumrelease__opt" data-value={value} aria-pressed="false">
+                      {value}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         <button type="button" class="albumrelease__cta albumrelease__cta--btn" data-vip-add data-price={vipPrice} disabled>
-          Select tees &amp; sizes
+          {EARLY_BIRD_SOLD_OUT ? 'Sold Out' : 'Select tees & sizes'}
         </button>
       </div>
     </div>
@@ -179,7 +212,7 @@ const vipOptionGroups = bundleOptionGroupsFor(VIP_PRODUCT_ID) ?? [];
 
   // VIP bundle — the tee + size must be chosen before the CTA unlocks.
   const vipCard = document.querySelector<HTMLElement>('.albumrelease__card--bundle');
-  if (vipCard) {
+  if (vipCard && !vipCard.classList.contains('albumrelease__card--soldout')) {
     const addBtn = vipCard.querySelector<HTMLButtonElement>('[data-vip-add]');
     const groups = [...vipCard.querySelectorAll<HTMLElement>('.albumrelease__optgroup')];
     const choices: Record<string, string> = {};
@@ -312,12 +345,26 @@ const vipOptionGroups = bundleOptionGroupsFor(VIP_PRODUCT_ID) ?? [];
     color: var(--accent);
     transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
   }
-  .albumrelease__card:hover,
-  .albumrelease__card:focus-visible {
+  .albumrelease__card:not(.albumrelease__card--soldout):hover,
+  .albumrelease__card:not(.albumrelease__card--soldout):focus-visible {
     transform: translateY(-10px) scale(1.03);
     border-color: var(--accent);
     box-shadow: 0 20px 45px rgba(0, 0, 0, 0.55);
     outline: none;
+  }
+
+  /* Early bird tiers once online sales close: art dims, text stays readable so
+     the "Sold Out" label is the thing you see. Not clickable, no hover lift. */
+  .albumrelease__card--soldout {
+    cursor: not-allowed;
+  }
+  .albumrelease__card--soldout .albumrelease__imgstack {
+    opacity: 0.4;
+    filter: grayscale(1);
+  }
+  .albumrelease__card--soldout .albumrelease__cta {
+    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+    color: var(--muted);
   }
 
   /* The VIP bundle card is a container (not a single click target) — its own
@@ -402,7 +449,7 @@ const vipOptionGroups = bundleOptionGroupsFor(VIP_PRODUCT_ID) ?? [];
   }
   /* Only the plain (GA/GA+) cards fill their CTA on hover. The VIP CTA is a
      real button with its own hover/disabled states below. */
-  .albumrelease__card:not(.albumrelease__card--bundle):hover .albumrelease__cta {
+  .albumrelease__card:not(.albumrelease__card--bundle):not(.albumrelease__card--soldout):hover .albumrelease__cta {
     background: var(--accent);
     color: var(--accent-ink);
   }
