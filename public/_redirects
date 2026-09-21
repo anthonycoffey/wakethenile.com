@@ -1,4 +1,5 @@
 /shop      /merch         301
 /shop/*    /merch/:splat  301
-/superfans /releaseparty  301
-/releaseparty /albumrelease 301
+/superfans /shows         301
+/releaseparty /shows      301
+/albumrelease /shows      301

@@ -9,8 +9,12 @@ const page = await sanityFetch<Page | null>(homePageQuery, {}, null);
 
 // Homepage is the wordmark cover. Fall back to a hardcoded shell if unseeded.
 const home: Page = page ?? { isHome: true, overlay: { enabled: true, color: '#000000', opacity: 0.7 } };
+
+// The album release show is over, so the "Get Tickets" CTA is dropped here in
+// code (the values are still in Sanity — see docs/specs/active/post-show-site-reset.md).
+const { ctaLabel: _ctaLabel, ctaHref: _ctaHref, ...homeNoCta } = home;
 ---
 
 <BaseLayout title={page?.title ?? 'Wake the Nile'} seo={page?.seo} footer="home">
-  <CoverSection page={{ ...home, isHome: true }} />
+  <CoverSection page={{ ...homeNoCta, isHome: true }} />
 </BaseLayout>
