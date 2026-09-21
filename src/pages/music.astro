@@ -1,67 +1,53 @@
 ---
-// wakethenile.com/music — cover hero (CMS-driven, same as the old generic
-// template) plus a static track list with inline players. Drifting Away has
-// no player yet (unreleased) — its row is an "Early Access" CTA to /drifting
-// instead. Audio/cover assets are static files, not CMS-managed, matching how
-// /videos coverflow entries and /drifting already host their media.
+// wakethenile.com/music — the Obuntu album: hero banner is the album art,
+// followed by the full 9-song track list (album order) with inline players.
+// Audio/cover assets are static files, not CMS-managed, matching how /videos
+// coverflow entries and /drifting already host their media. See
+// docs/specs/active/post-show-site-reset.md.
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { sanityFetch } from '../lib/sanity';
-import { pageBySlugQuery } from '../lib/queries';
-import { urlFor } from '../lib/sanityImage';
-import type { Page } from '../lib/types';
 
-const page = await sanityFetch<Page | null>(pageBySlugQuery, { slug: 'music' }, null);
-
-const bg = page?.coverImage ? urlFor(page.coverImage) : undefined;
-const ov = page?.overlay;
-const overlayOn = ov?.enabled !== false && !!ov?.color;
-const overlayColor = ov?.color ?? '#000000';
-const overlayOpacity = typeof ov?.opacity === 'number' ? ov.opacity : 0.2;
+const albumCover = '/images/obuntu-cover.jpg';
+const albumThumb = '/images/obuntu-cover-thumb.jpg';
 
 interface Track {
   title: string;
-  cover: string;
-  audio?: string;
-  earlyAccessHref?: string;
+  audio: string;
 }
 
+// Album order (matches the sequenced album files, 01–09).
 const tracks: Track[] = [
-  { title: 'Lamb', cover: '/images/lamb-cover.jpg', audio: '/audio/lamb.mp3' },
-  { title: 'Mercy', cover: '/images/mercy-cover.jpg', audio: '/audio/mercy.mp3' },
-  { title: 'Champion', cover: '/images/champion-cover.jpg', audio: '/audio/champion.mp3' },
-  { title: 'Drifting Away', cover: '/images/drifting-away-cover.jpg', earlyAccessHref: '/drifting' },
+  { title: 'Lamb', audio: '/audio/lamb.mp3' },
+  { title: 'Fall', audio: '/audio/fall.mp3' },
+  { title: 'Mercy', audio: '/audio/mercy.mp3' },
+  { title: 'Dance', audio: '/audio/dance.mp3' },
+  { title: 'Drifting Away', audio: '/audio/drifting-away.mp3' },
+  { title: 'Elements', audio: '/audio/elements.mp3' },
+  { title: 'Walk (Run)', audio: '/audio/walk-run.mp3' },
+  { title: 'Champion', audio: '/audio/champion.mp3' },
+  { title: 'Matter', audio: '/audio/matter.mp3' },
 ];
 ---
 
 <BaseLayout title="Music" description="Listen to music from Wake the Nile." footer="scroll">
   <section class="music">
-    {bg && (
-      <div class="music__hero">
-        <img class="music__hero-img" src={bg} alt="" />
-        {overlayOn && (
-          <div class="music__overlay" style={`background:${overlayColor}; opacity:${overlayOpacity}`} />
-        )}
-        <div class="music__hero-fade" />
-      </div>
-    )}
+    <div class="music__hero">
+      <img class="music__hero-img" src={albumCover} alt="Obuntu — album cover art" width="1600" height="1600" fetchpriority="high" />
+      <div class="music__hero-fade" />
+    </div>
     <div class="music__content">
-      <ul class="tracklist">
-        {tracks.map((track) => (
+      <ol class="tracklist">
+        {tracks.map((track, i) => (
           <li class="track">
-            <img class="track__cover" src={track.cover} alt={`${track.title} cover art`} width="120" height="120" loading="lazy" />
+            <img class="track__cover" src={albumThumb} alt="" width="120" height="120" loading="lazy" />
             <div class="track__body">
-              <p class="track__title">{track.title}</p>
-              {track.audio ? (
-                <audio class="track__audio" controls preload="none" src={track.audio}>
-                  Your browser doesn't support inline audio.
-                </audio>
-              ) : (
-                <a class="btn track__cta" href={track.earlyAccessHref}>Early Access</a>
-              )}
+              <p class="track__title"><span class="track__num">{String(i + 1).padStart(2, '0')}</span>{track.title}</p>
+              <audio class="track__audio" controls preload="none" src={track.audio}>
+                Your browser doesn't support inline audio.
+              </audio>
             </div>
           </li>
         ))}
-      </ul>
+      </ol>
     </div>
   </section>
 </BaseLayout>
@@ -71,29 +57,29 @@ const tracks: Track[] = [
     position: relative;
     padding-bottom: 4rem;
   }
+  /* The art's edge is a flat #d4101a, so the square cover centred on that
+     field reads as a full-bleed banner without cropping the wordmark. */
   .music__hero {
     position: relative;
     z-index: 0;
     width: 100%;
-    aspect-ratio: 16 / 9;
+    display: flex;
+    justify-content: center;
+    background: #d4101a;
     overflow: hidden;
+    /* Extra red under the art carries the fade so it never covers the wordmark. */
+    padding-bottom: 5rem;
   }
   .music__hero-img {
     display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center;
-  }
-  .music__overlay {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
+    width: min(100%, 78vh, 900px);
+    height: auto;
+    aspect-ratio: 1 / 1;
   }
   .music__hero-fade {
     position: absolute;
     inset: auto 0 0 0;
-    height: 35%;
+    height: 5rem;
     background: linear-gradient(to bottom, transparent, var(--bg));
     z-index: 2;
   }
@@ -101,7 +87,7 @@ const tracks: Track[] = [
     position: relative;
     max-width: 720px;
     margin-inline: auto;
-    margin-top: -33vw;
+    margin-top: -2.5rem;
     padding: 2.5rem 1.25rem 2rem;
     text-align: center;
   }
@@ -146,16 +132,17 @@ const tracks: Track[] = [
     letter-spacing: 0.02em;
     margin: 0;
   }
+  .track__num {
+    display: inline-block;
+    min-width: 1.75em;
+    margin-right: 0.5em;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
   .track__audio {
     width: 100%;
     height: 32px;
   }
-  .track__cta {
-    align-self: flex-start;
-    font-size: 0.85rem;
-    padding: 0.55em 1.2em;
-  }
-
   @media (max-width: 520px) {
     .track {
       gap: 0.85rem;

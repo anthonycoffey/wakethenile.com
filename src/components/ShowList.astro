@@ -7,7 +7,10 @@ interface Props {
   past?: Show[];
 }
 const { upcoming = [], past = [] } = Astro.props;
-const shows = [...upcoming, ...past];
+const shows = [
+  ...upcoming.map((show) => ({ show, isPast: false })),
+  ...past.map((show) => ({ show, isPast: true })),
+];
 ---
 
 {
@@ -16,7 +19,7 @@ const shows = [...upcoming, ...past];
   ) : (
     <div class="showlist-wrapper">
       <ul>
-        {shows.map((show) => <ShowCard show={show} />)}
+        {shows.map(({ show, isPast }) => <ShowCard show={show} isPast={isPast} />)}
       </ul>
     </div>
   )

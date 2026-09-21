@@ -1,7 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import ShowList from '../components/ShowList.astro';
-import EarlyBirdBanner from '../components/EarlyBirdBanner.astro';
 import { sanityFetch } from '../lib/sanity';
 import { upcomingShowsQuery, pastShowsQuery, showsPageQuery } from '../lib/queries';
 import { urlFor } from '../lib/sanityImage';
@@ -34,7 +33,6 @@ const overlayOpacity = typeof ov?.opacity === 'number' ? ov.opacity : 0.5;
     )}
     <div class="shows__content">
       <h1 class="shows__title">Shows</h1>
-      <EarlyBirdBanner />
       <ShowList upcoming={upcoming} past={past} />
     </div>
   </section>

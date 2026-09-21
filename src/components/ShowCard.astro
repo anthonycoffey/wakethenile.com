@@ -3,8 +3,10 @@ import type { Show } from '../lib/types';
 
 interface Props {
   show: Show;
+  /** Show date has passed: dim the row and disable the ticket button. */
+  isPast?: boolean;
 }
-const { show } = Astro.props;
+const { show, isPast = false } = Astro.props;
 
 const dt = show.date ? new Date(show.date) : null;
 // Always render in the venue's local time (Central) regardless of where the
@@ -18,7 +20,7 @@ const where = [show.city, show.state].filter(Boolean).join(', ');
 const ticketsLabel = show.ticketsLabel || 'Get Tickets';
 ---
 
-<li class="show">
+<li class={`show${isPast ? ' is-past' : ''}`}>
   <div class="show-title">{show.title}</div>
   <div class="show-datewhere">
     <span class="show-date">{dateStr}</span>
@@ -26,7 +28,11 @@ const ticketsLabel = show.ticketsLabel || 'Get Tickets';
   </div>
   <div class="show-tickets-link">
     {
-      show.soldOut ? (
+      isPast ? (
+        <span class="tickets-button is-disabled" aria-disabled="true">
+          {ticketsLabel}
+        </span>
+      ) : show.soldOut ? (
         <span class="show-soldout">Sold Out</span>
       ) : (
         show.ticketsUrl && (
@@ -96,6 +102,17 @@ const ticketsLabel = show.ticketsLabel || 'Get Tickets';
     background: var(--accent);
     color: var(--accent-ink);
     text-decoration: none;
+  }
+  /* Past show: whole row dimmed, button visible but inert. */
+  .show.is-past {
+    opacity: 0.5;
+  }
+  .tickets-button.is-disabled {
+    color: var(--muted);
+    border-color: var(--muted);
+    cursor: not-allowed;
+    pointer-events: none;
+    user-select: none;
   }
   .show-soldout {
     color: var(--muted);

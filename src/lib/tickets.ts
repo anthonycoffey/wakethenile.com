@@ -4,7 +4,7 @@
  * While `true`, online ticket sales are closed: /albumrelease and /shows show
  * the "sold out — tickets at the door" banner, the ticket tiers render as Sold
  * Out, ticket products drop out of the /merch grid (their product pages
- * redirect to /albumrelease), and /api/checkout refuses any ticket line.
+ * redirect to /shows), and /api/checkout refuses any ticket line.
  * Door tickets are sold at the merch booth on the Stripe Reader, not here.
  *
  * `functions/api/checkout.ts` keeps its own mirrored flag (a separate Workers

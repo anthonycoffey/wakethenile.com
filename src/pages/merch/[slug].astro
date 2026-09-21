@@ -42,9 +42,9 @@ if (open && !product) {
 }
 
 // Ticket products are no longer sold online; send anyone with an old link to
-// the page that explains door sales.
+// the shows page.
 if (EARLY_BIRD_SOLD_OUT && product && TICKET_PRODUCT_IDS.has(product._id)) {
-  return Astro.redirect('/albumrelease');
+  return Astro.redirect('/shows');
 }
 
 const gallery = product
