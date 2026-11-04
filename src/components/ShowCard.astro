@@ -1,5 +1,7 @@
 ---
 import type { Show } from '../lib/types';
+import ShowTickets from './ShowTickets.astro';
+import { showForSanityDoc } from '../lib/shows';
 
 interface Props {
   show: Show;
@@ -18,9 +20,13 @@ const dateStr = dt
   : 'Date TBD';
 const where = [show.city, show.state].filter(Boolean).join(', ');
 const ticketsLabel = show.ticketsLabel || 'Get Tickets';
+// Shows we ticket ourselves (ADR 0009) sell from a panel right on this row
+// instead of linking out.
+const ours = showForSanityDoc(show._id);
+const sellHere = !isPast && !show.soldOut && !!ours?.onlineSales;
 ---
 
-<li class={`show${isPast ? ' is-past' : ''}`}>
+<li class={`show${isPast ? ' is-past' : ''}`} id={sellHere ? `tickets-${ours!.id}` : undefined}>
   <div class="show-title">{show.title}</div>
   <div class="show-datewhere">
     <span class="show-date">{dateStr}</span>
@@ -34,6 +40,16 @@ const ticketsLabel = show.ticketsLabel || 'Get Tickets';
         </span>
       ) : show.soldOut ? (
         <span class="show-soldout">Sold Out</span>
+      ) : sellHere ? (
+        <button
+          type="button"
+          class="tickets-button"
+          data-tix-toggle={ours!.id}
+          aria-expanded="false"
+          aria-controls={`tickets-panel-${ours!.id}`}
+        >
+          {ticketsLabel}
+        </button>
       ) : (
         show.ticketsUrl && (
           <a class="tickets-button" href={show.ticketsUrl}>
@@ -43,6 +59,7 @@ const ticketsLabel = show.ticketsLabel || 'Get Tickets';
       )
     }
   </div>
+  {sellHere && <ShowTickets show={ours!} />}
 </li>
 
 <style>
@@ -55,6 +72,8 @@ const ticketsLabel = show.ticketsLabel || 'Get Tickets';
     padding: 2rem 0;
     text-align: left;
     border-bottom: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    /* Deep links to a ticket panel scroll here; clear the fixed header. */
+    scroll-margin-top: 6rem;
   }
   .show:last-child {
     border-bottom: none;
@@ -86,6 +105,8 @@ const ticketsLabel = show.ticketsLabel || 'Get Tickets';
   /* outline tickets button (plugin .tickets-button) */
   .tickets-button {
     display: inline-block;
+    font-family: inherit;
+    cursor: pointer;
     color: var(--accent);
     text-transform: uppercase;
     padding: 12px 22px;
@@ -98,7 +119,8 @@ const ticketsLabel = show.ticketsLabel || 'Get Tickets';
     white-space: nowrap;
     transition: background-color 0.3s ease, color 0.3s ease;
   }
-  .tickets-button:hover {
+  .tickets-button:hover,
+  .tickets-button[aria-expanded='true'] {
     background: var(--accent);
     color: var(--accent-ink);
     text-decoration: none;

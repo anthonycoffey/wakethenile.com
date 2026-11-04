@@ -7,6 +7,8 @@ interface Ticket {
   ticketCode: string;
   ticketTier: string;
   admits: number;
+  /** "December 4" — which show the ticket is for. */
+  showDate?: string | null;
 }
 
 /**
@@ -164,7 +166,7 @@ export default function CheckoutReturn() {
               <>
                 <p className="return__ticketlabel">
                   🎟️ Your {ticket.ticketTier === 'vip' ? 'VIP ' : ticket.ticketTier === 'ga-plus' ? 'GA+ (free drinks!) ' : ''}ticket
-                  {ticket.admits > 1 ? ` (admits ${ticket.admits})` : ''} — show this at the door
+                  {ticket.admits > 1 ? ` (admits ${ticket.admits})` : ''} — show this at the door{ticket.showDate ? ` on ${ticket.showDate}` : ''}
                 </p>
                 <div
                   className="return__qr"

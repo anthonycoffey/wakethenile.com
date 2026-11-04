@@ -1,0 +1,295 @@
+---
+// On-page ticket panel for a show we sell ourselves (ADR 0009). Rendered by
+// ShowCard under its row, collapsed until "Get Tickets" is pressed.
+//
+// The page is static, so the price phase (early bird → regular → sold out)
+// can't be decided at build time. The panel asks /api/ticket-stock when it
+// opens and falls back to the stock baked in here if that call fails.
+// Checkout re-validates price + stock either way.
+import { sanityFetch } from '../lib/sanity';
+import { productsForShow, TICKET_PRODUCTS, type ShowInfo } from '../lib/shows';
+
+interface Props {
+  show: ShowInfo;
+}
+const { show } = Astro.props;
+
+const ids = productsForShow(show.id);
+const rows = await sanityFetch<{ id: string; title: string; price: number; stock: number }[]>(
+  `*[_type == "product" && _id in $ids]{ "id": _id, title, price, "stock": coalesce(stock, 0) }`,
+  { ids },
+  [],
+);
+const products = ids
+  .map((id) => {
+    const r = rows.find((x) => x.id === id);
+    return r ? { ...r, stock: Math.max(0, r.stock), phaseLabel: TICKET_PRODUCTS[id].phaseLabel ?? null } : null;
+  })
+  .filter((p): p is NonNullable<typeof p> => !!p);
+// The last phase's price, so early-bird copy can say what comes next.
+const nextPrice = products.length > 1 ? products[products.length - 1].price : null;
+const details = [show.timesText, show.age].filter(Boolean).join(' · ');
+---
+
+<div class="tix" id={`tickets-panel-${show.id}`} data-show={show.id} hidden>
+  <div class="tix__inner">
+    <p class="tix__billing">
+      {show.billing}{show.support && <span class="tix__support"> {show.support}</span>}
+    </p>
+    <p class="tix__meta">{show.dateText} · {show.venue} · {show.city}</p>
+    {details && <p class="tix__meta">{details}</p>}
+
+    <div class="tix__buy" data-state="loading">
+      <div class="tix__price">
+        <span class="tix__phase" data-phase></span>
+        <span class="tix__amount" data-amount></span>
+      </div>
+      <p class="tix__left" data-left></p>
+      <div class="tix__qty">
+        <button type="button" class="tix__step" data-step="-1" aria-label="One fewer ticket">−</button>
+        <span class="tix__count" aria-live="polite"><strong data-qty>1</strong> ticket<span data-plural hidden>s</span></span>
+        <button type="button" class="tix__step" data-step="1" aria-label="One more ticket">+</button>
+      </div>
+      <button type="button" class="tix__add" data-add>Add to cart →</button>
+      <p class="tix__soldout" data-soldout hidden>
+        Sold out online — tickets at the door{show.doorPrice ? ` ($${show.doorPrice})` : ''}.
+      </p>
+    </div>
+
+    <p class="tix__fine">
+      Your ticket is a QR code emailed to you right after checkout — nothing ships.
+      {show.age && ` ${show.age}: bring your ID.`}
+    </p>
+  </div>
+</div>
+
+<script
+  is:inline
+  type="application/json"
+  data-tix-fallback={show.id}
+  set:html={JSON.stringify({ products, nextPrice }).replace(/</g, '\\u003c')}
+/>
+
+<script>
+  import { addItem } from '../lib/cart';
+
+  interface Product { id: string; title: string; price: number; stock: number; phaseLabel: string | null }
+  const MAX_PER_ORDER = 8;
+
+  for (const panel of document.querySelectorAll<HTMLElement>('.tix[data-show]')) {
+    const showId = panel.dataset.show!;
+    const fallbackEl = document.querySelector<HTMLScriptElement>(`[data-tix-fallback="${showId}"]`);
+    const fallback = JSON.parse(fallbackEl?.textContent || '{}') as { products?: Product[]; nextPrice?: number | null };
+    const buy = panel.querySelector<HTMLElement>('.tix__buy')!;
+    const $ = <T extends HTMLElement>(sel: string) => panel.querySelector<T>(sel)!;
+    let current: Product | null = null;
+    let qty = 1;
+    let loaded = false;
+
+    const render = (products: Product[]) => {
+      // Sale order: the first phase with stock left is the one on sale.
+      current = products.find((p) => p.stock > 0) ?? null;
+      buy.dataset.state = current ? 'open' : 'soldout';
+      $('[data-soldout]').hidden = !!current;
+      for (const sel of ['.tix__price', '[data-left]', '.tix__qty', '[data-add]']) $(sel).hidden = !current;
+      if (!current) return;
+      const isEarly = products.length > 1 && current.id === products[0].id;
+      $('[data-phase]').textContent = current.phaseLabel ?? '';
+      $('[data-amount]').textContent = `$${current.price}`;
+      $('[data-left]').textContent =
+        isEarly && fallback.nextPrice
+          ? `${current.stock} early bird ticket${current.stock === 1 ? '' : 's'} left — then $${fallback.nextPrice}`
+          : current.stock <= 20
+            ? `Only ${current.stock} left online`
+            : '';
+      qty = Math.min(qty, maxQty());
+      paintQty();
+    };
+    const maxQty = () => Math.max(1, Math.min(MAX_PER_ORDER, current?.stock ?? 1));
+    const paintQty = () => {
+      $('[data-qty]').textContent = String(qty);
+      $('[data-plural]').hidden = qty === 1;
+      $<HTMLButtonElement>('[data-step="-1"]').disabled = qty <= 1;
+      $<HTMLButtonElement>('[data-step="1"]').disabled = qty >= maxQty();
+    };
+
+    const load = async () => {
+      if (loaded) return;
+      loaded = true;
+      render(fallback.products ?? []);
+      try {
+        const res = await fetch(`/api/ticket-stock?show=${encodeURIComponent(showId)}`, {
+          signal: AbortSignal.timeout(6000),
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as { products?: Product[] };
+        if (Array.isArray(data.products) && data.products.length) render(data.products);
+      } catch {
+        /* keep the build-time fallback */
+      }
+    };
+
+    panel.querySelectorAll<HTMLButtonElement>('[data-step]').forEach((btn) =>
+      btn.addEventListener('click', () => {
+        qty = Math.min(maxQty(), Math.max(1, qty + Number(btn.dataset.step)));
+        paintQty();
+      }),
+    );
+
+    $('[data-add]').addEventListener('click', () => {
+      if (!current) return;
+      addItem({
+        productId: current.id,
+        slug: current.id,
+        title: current.title,
+        sku: current.id,
+        unitPrice: current.price,
+        qty,
+      });
+      // Same GA path as the album release: a nudge to grab merch (picked up at
+      // the show, 15% off) before checkout. See merch.astro / CheckoutCustom.
+      sessionStorage.setItem('wtn_upsell_msg', '1');
+      sessionStorage.setItem('wtn_promo', 'WTN15OFF');
+      window.location.href = '/merch';
+    });
+
+    const toggle = document.querySelector<HTMLButtonElement>(`[data-tix-toggle="${showId}"]`);
+    const setOpen = (open: boolean) => {
+      panel.hidden = !open;
+      toggle?.setAttribute('aria-expanded', String(open));
+      if (open) load();
+    };
+    toggle?.addEventListener('click', () => setOpen(panel.hidden));
+    // Deep link from ads / the home page: /shows#tickets-2026-12-04 opens it.
+    // That id sits on the show's ROW (ShowCard), so the browser's own anchor
+    // jump lands on the title + date, clear of the fixed header.
+    if (location.hash === `#tickets-${showId}`) {
+      setOpen(true);
+      document.getElementById(`tickets-${showId}`)?.scrollIntoView({ block: 'start' });
+    }
+  }
+</script>
+
+<style>
+  .tix {
+    grid-column: 1 / -1;
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    background: color-mix(in srgb, #000 70%, transparent);
+    border-radius: 12px;
+    padding: 1.75rem 1.5rem;
+    text-align: center;
+  }
+  .tix[hidden] {
+    display: none;
+  }
+  .tix__inner {
+    max-width: 34rem;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .tix__billing {
+    color: var(--accent);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: clamp(1.15rem, 1rem + 0.8vw, 1.5rem);
+    margin: 0;
+  }
+  .tix__support {
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+    opacity: 0.85;
+  }
+  .tix__meta {
+    color: var(--muted);
+    margin: 0;
+    font-size: 0.95rem;
+  }
+  .tix__buy {
+    margin: 1.1rem 0 0.4rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.7rem;
+    min-height: 9rem;
+  }
+  .tix__buy [hidden] {
+    display: none !important;
+  }
+  .tix__price {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+  }
+  .tix__phase {
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+  .tix__amount {
+    color: var(--accent);
+    font-size: 2.4rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .tix__left {
+    color: var(--accent);
+    margin: 0;
+    font-size: 0.9rem;
+    opacity: 0.9;
+  }
+  .tix__left:empty {
+    display: none;
+  }
+  .tix__qty {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+  }
+  .tix__step {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    border: 1px solid var(--accent);
+    background: transparent;
+    color: var(--accent);
+    font-size: 1.3rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .tix__step:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+  .tix__count {
+    color: var(--accent);
+    min-width: 6.5rem;
+  }
+  .tix__add {
+    padding: 0.85rem 1.8rem;
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: 2px solid var(--accent);
+    border-radius: 100px;
+    font-family: inherit;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+  }
+  .tix__soldout {
+    color: var(--accent);
+    font-weight: 700;
+    margin: 0;
+  }
+  .tix__fine {
+    color: var(--muted);
+    font-size: 0.8rem;
+    margin: 0.5rem 0 0;
+  }
+</style>

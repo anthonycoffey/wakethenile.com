@@ -45,6 +45,15 @@ export const order = defineType({
     // --- Live-show ticketing (set by the Stripe webhook when the order
     // contains a ticket/bundle; drives the QR pass + door check-in). ---
     defineField({
+      name: 'show',
+      title: 'Show',
+      type: 'string',
+      readOnly: true,
+      description:
+        'Which show this ticket admits to (show id from src/lib/shows.ts, e.g. 2026-12-04). ' +
+        'Orders from before this field existed are the Sep 19 show. Absent on merch-only orders.',
+    }),
+    defineField({
       name: 'ticketTier',
       title: 'Ticket tier',
       type: 'string',

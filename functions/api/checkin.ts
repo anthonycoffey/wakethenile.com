@@ -13,6 +13,8 @@
  * Writes are pinned with `ifRevisionID` so two lanes scanning the same code
  * at once can't both succeed. Edge-native.
  */
+import { LEGACY_SHOW_ID, doorShowAt, showInfo } from '../../src/lib/shows';
+
 interface Env {
   SANITY_PROJECT_ID?: string;
   SANITY_DATASET?: string;
@@ -89,13 +91,14 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
     checkedInAt?: string | null;
     refundedAt?: string | null;
     fulfillmentStatus?: string | null;
+    show?: string | null;
     _rev?: string;
   } | null;
   try {
     order = await sanityQuery(
       env,
-      `*[_type == "order" && !(_id in path("drafts.**")) && ticketCode == $code][0]{ _id, _rev, customerName, ticketTier, admits, admitted, checkedInAt, refundedAt, fulfillmentStatus }`,
-      { code },
+      `*[_type == "order" && !(_id in path("drafts.**")) && ticketCode == $code][0]{ _id, _rev, customerName, ticketTier, admits, admitted, checkedInAt, refundedAt, fulfillmentStatus, "show": coalesce(show, $legacy) }`,
+      { code, legacy: LEGACY_SHOW_ID },
     );
   } catch {
     return json({ error: 'Lookup failed.' }, 502);
@@ -105,6 +108,23 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
   if (order.refundedAt) return json({ error: 'Refunded ticket — do not admit.' }, 410);
   if (order.fulfillmentStatus === 'cancelled') {
     return json({ error: 'Cancelled ticket — do not admit.' }, 410);
+  }
+  // A ticket only admits to its own night (ADR 0009). The door show is
+  // decided here from the clock, never by the client, so a stale door phone
+  // can't wave an old show's QR through. Undo stays allowed so a mistaken
+  // scan can always be reversed.
+  const doorShow = doorShowAt();
+  if (!undo && order.show !== doorShow.id) {
+    const theirs = showInfo(order.show);
+    return json(
+      {
+        error: `Wrong show — this ticket is for ${theirs?.label ?? order.show}. Do not admit.`,
+        wrongShow: true,
+        ticketShow: theirs?.label ?? order.show,
+        doorShow: doorShow.label,
+      },
+      410,
+    );
   }
 
   const admits = Math.max(1, order.admits ?? 1);

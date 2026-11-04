@@ -4,17 +4,25 @@ import CoverSection from '../components/CoverSection.astro';
 import { sanityFetch } from '../lib/sanity';
 import { homePageQuery } from '../lib/queries';
 import type { Page } from '../lib/types';
+import { doorShowAt } from '../lib/shows';
 
 const page = await sanityFetch<Page | null>(homePageQuery, {}, null);
 
 // Homepage is the wordmark cover. Fall back to a hardcoded shell if unseeded.
 const home: Page = page ?? { isHome: true, overlay: { enabled: true, color: '#000000', opacity: 0.7 } };
 
-// The album release show is over, so the "Get Tickets" CTA is dropped here in
-// code (the values are still in Sanity — see docs/specs/active/post-show-site-reset.md).
+// The Sanity CTA still points at the finished album release show, so it's
+// ignored (see docs/specs/active/post-show-site-reset.md). Instead the button
+// follows the show registry: while the next show is on sale online it deep-
+// links to that show's ticket panel on /shows (ADR 0009), else no button.
 const { ctaLabel: _ctaLabel, ctaHref: _ctaHref, ...homeNoCta } = home;
+const next = doorShowAt();
+const onSale = next.onlineSales && Date.parse(next.startsAt) > Date.now();
+const cta = onSale
+  ? { ctaLabel: `${next.promo ?? next.dateText} — Get Tickets`, ctaHref: `/shows#tickets-${next.id}` }
+  : {};
 ---
 
 <BaseLayout title={page?.title ?? 'Wake the Nile'} seo={page?.seo} footer="home">
-  <CoverSection page={{ ...homeNoCta, isHome: true }} />
+  <CoverSection page={{ ...homeNoCta, ...cta, isHome: true }} />
 </BaseLayout>

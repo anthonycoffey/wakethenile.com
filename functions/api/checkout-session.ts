@@ -5,16 +5,9 @@
  * is a ticket purchase and, once the webhook has recorded it, the ticketCode so
  * the thank-you page can show the QR pass. Edge-native raw fetch.
  */
-const STRIPE_VERSION = '2026-06-24.dahlia';
+import { TICKET_PRODUCT_IDS, showInfo } from '../../src/lib/shows';
 
-// Admit-granting products (mirror functions/api/checkout.ts + stripe-webhook.ts).
-// See docs/specs/active/albumrelease-ga-tiers.md for the full sync checklist.
-const TICKET_PRODUCT_IDS = new Set([
-  '2480f00d-9317-4ed0-9406-bcef1e34bc71', // Live Show Ticket
-  'b351d11f-4c78-4a1f-b36b-c10d951c96ea', // VIP Fan Experience
-  'albumrelease-ga', // GA (/albumrelease)
-  'albumrelease-ga-plus', // GA Plus (/albumrelease)
-]);
+const STRIPE_VERSION = '2026-06-24.dahlia';
 
 interface Env {
   STRIPE_SECRET_KEY?: string;
@@ -79,15 +72,20 @@ export const onRequestGet = async (context: { request: Request; env: Env }): Pro
   );
 
   // Once the webhook has written the order, surface the ticket code for the QR.
-  let ticket: { ticketCode: string; ticketTier: string; admits: number } | null = null;
+  let ticket: { ticketCode: string; ticketTier: string; admits: number; showDate: string | null } | null = null;
   if (session.status === 'complete' && hasTicket) {
-    const order = await sanityQuery<{ ticketCode?: string; ticketTier?: string; admits?: number }>(
+    const order = await sanityQuery<{ ticketCode?: string; ticketTier?: string; admits?: number; show?: string }>(
       env,
-      `*[_type == "order" && !(_id in path("drafts.**")) && stripeSessionId == $sid && !defined(refundedAt)][0]{ ticketCode, ticketTier, admits }`,
+      `*[_type == "order" && !(_id in path("drafts.**")) && stripeSessionId == $sid && !defined(refundedAt)][0]{ ticketCode, ticketTier, admits, show }`,
       { sid: sessionId },
     );
     if (order?.ticketCode) {
-      ticket = { ticketCode: order.ticketCode, ticketTier: order.ticketTier ?? 'ga', admits: order.admits ?? 1 };
+      ticket = {
+        ticketCode: order.ticketCode,
+        ticketTier: order.ticketTier ?? 'ga',
+        admits: order.admits ?? 1,
+        showDate: showInfo(order.show)?.dateText ?? null,
+      };
     }
   }
 

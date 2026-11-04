@@ -35,22 +35,34 @@ export default function AttendeeList() {
   const [rows, setRows] = useState<Attendee[]>([]);
   const [q, setQ] = useState('');
   const [err, setErr] = useState<string | null>(null);
+  // Per-show door list (ADR 0009). The server picks tonight's show when we
+  // don't ask for one; the picker lets staff look back at earlier shows.
+  const [show, setShow] = useState<{ id: string; label: string } | null>(null);
+  const [shows, setShows] = useState<{ id: string; label: string }[]>([]);
 
-  async function load(pin: string) {
+  async function load(pin: string, showId?: string) {
     setStatus('loading');
     setErr(null);
     try {
-      const res = await fetch('/api/attendees', { headers: { 'x-staff-pin': pin } });
+      const qs = showId ? `?show=${encodeURIComponent(showId)}` : '';
+      const res = await fetch(`/api/attendees${qs}`, { headers: { 'x-staff-pin': pin } });
       if (res.status === 401) {
         localStorage.removeItem(PIN_KEY);
         setStatus('locked');
         setErr('Wrong door PIN.');
         return;
       }
-      const data = (await res.json()) as { attendees?: Attendee[]; error?: string };
+      const data = (await res.json()) as {
+        attendees?: Attendee[];
+        show?: { id: string; label: string };
+        shows?: { id: string; label: string }[];
+        error?: string;
+      };
       if (!res.ok) throw new Error(data.error || 'load failed');
       localStorage.setItem(PIN_KEY, pin);
       setRows(data.attendees ?? []);
+      setShow(data.show ?? null);
+      setShows(data.shows ?? []);
       setStatus('ready');
     } catch {
       setStatus('error');
@@ -95,7 +107,7 @@ export default function AttendeeList() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `wtn-attendees-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `wtn-attendees-${show?.id ?? new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -133,6 +145,22 @@ export default function AttendeeList() {
         <h1 className="att__title">Attendees</h1>
         <button type="button" className="att__csv" onClick={downloadCsv}>Download CSV</button>
       </div>
+      {shows.length > 1 && (
+        <select
+          className="att__search"
+          aria-label="Show"
+          value={show?.id ?? ''}
+          onChange={(e) => {
+            const pin = localStorage.getItem(PIN_KEY);
+            if (pin) load(pin, e.target.value);
+          }}
+          style={{ marginBottom: '0.75rem', width: '100%' }}
+        >
+          {shows.map((s) => (
+            <option key={s.id} value={s.id}>{s.label}</option>
+          ))}
+        </select>
+      )}
       <p className="att__stats">
         {totals.orders} orders · {totals.admits} admits · <strong>{totals.inCount}</strong> in the room
         {totals.walkUps > 0 && <> · {totals.walkUps} at the door</>}

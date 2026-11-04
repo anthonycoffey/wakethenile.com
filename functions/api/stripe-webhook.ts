@@ -16,31 +16,21 @@
  * payment intent for booth) and refunds no-op once `refundedAt` is set, so
  * Stripe's retries can't double-count stock in either direction.
  */
+import {
+  DOOR_TICKET_SKUS,
+  LEGACY_SHOW_ID,
+  TIER_PRIORITY,
+  showInfo,
+  ticketProduct,
+  type TicketTier,
+} from '../../src/lib/shows';
+
 const STRIPE_VERSION = '2026-06-24.dahlia';
 
-// Admit-granting products for the Sep 19 show, and which door tier each one
-// grants. Mirrors the ids in functions/api/checkout.ts
-// (PICKUP_ELIGIBLE_PRODUCT_IDS) — keep in sync if these products are ever
-// recreated. See docs/specs/active/albumrelease-ga-tiers.md for the full
-// sync checklist. VIP = the VIP Fan Experience bundle (ticket + drinks +
-// merch tee); GA Plus = ticket + drinks, no merch.
-type TicketTier = 'ga' | 'vip' | 'ga-plus';
-const TICKET_TIER_BY_PRODUCT_ID: Record<string, TicketTier> = {
-  '2480f00d-9317-4ed0-9406-bcef1e34bc71': 'ga', // Live Show Ticket (/releaseparty)
-  'b351d11f-4c78-4a1f-b36b-c10d951c96ea': 'vip', // VIP Fan Experience (/releaseparty)
-  'albumrelease-ga': 'ga', // GA (/albumrelease)
-  'albumrelease-ga-plus': 'ga-plus', // GA Plus (/albumrelease)
-};
-// Door tickets exist only in Stripe (no Sanity product backs them), so they
-// carry no `productId` metadata and are matched on SKU instead.
-const BOOTH_TICKET_TIER_BY_SKU: Record<string, TicketTier> = {
-  'TICKET-DOOR-GA': 'ga',
-};
-// If a cart somehow mixes tiers, the order's headline tier is the best perk
-// present — admits still sum every ticket-shaped line regardless of tier.
-const TIER_PRIORITY: TicketTier[] = ['vip', 'ga-plus', 'ga'];
-// HubSpot contact property that flags a Sep 19 attendee (value "GA"/"VIP").
-const HUBSPOT_TICKET_PROPERTY = 'wtn_show_2026_09_19';
+// Which products and booth SKUs admit to which show, and the per-show copy,
+// HubSpot property and sales state, all come from the show registry —
+// src/lib/shows.ts, ADR 0009.
+const LEGACY = LEGACY_SHOW_ID;
 
 interface Env {
   STRIPE_SECRET_KEY?: string;
@@ -197,12 +187,14 @@ async function hubspotSetAttendeeTier(
   email: string | null,
   name: string | null,
   tier: TicketTier | '',
+  showId: string | null | undefined,
 ): Promise<void> {
   if (!env.HUBSPOT_TOKEN || !email) return;
   const [firstname, ...rest] = (name ?? '').trim().split(/\s+/);
   const lastname = rest.join(' ');
-  try {
-    const res = await fetch('https://api.hubapi.com/crm/v3/objects/contacts/batch/upsert', {
+  const property = showInfo(showId)?.hubspotProperty;
+  const upsert = (withShow: boolean) =>
+    fetch('https://api.hubapi.com/crm/v3/objects/contacts/batch/upsert', {
       method: 'POST',
       headers: {
         authorization: `Bearer ${env.HUBSPOT_TOKEN}`,
@@ -217,12 +209,20 @@ async function hubspotSetAttendeeTier(
               email,
               ...(firstname ? { firstname } : {}),
               ...(lastname ? { lastname } : {}),
-              [HUBSPOT_TICKET_PROPERTY]: tier ? tier.toUpperCase() : '',
+              ...(withShow && property ? { [property]: tier ? tier.toUpperCase() : '' } : {}),
             },
           },
         ],
       }),
     });
+  try {
+    let res = await upsert(true);
+    // A show property nobody has created in HubSpot yet rejects the WHOLE
+    // upsert. Land the contact anyway; the flag can be backfilled later.
+    if (res.status === 400 && property) {
+      console.error(`[webhook] HubSpot rejected property ${property} — retrying without it:`, await res.text());
+      res = await upsert(false);
+    }
     if (!res.ok) {
       console.error('[webhook] HubSpot upsert failed:', res.status, await res.text());
     }
@@ -412,25 +412,34 @@ async function warnIfOversold(
 function ticketSummary(
   lines: OrderLine[],
   channel: 'web' | 'booth',
-): { admits: number; tier?: TicketTier; breakdown: { tier: TicketTier; admits: number }[] } {
-  const tierOf = (li: OrderLine): TicketTier | undefined =>
-    TICKET_TIER_BY_PRODUCT_ID[li.productId] ??
-    (channel === 'booth'
-      ? BOOTH_TICKET_TIER_BY_SKU[(li.sku || '').trim().toUpperCase()]
-      : undefined);
+): {
+  admits: number;
+  tier?: TicketTier;
+  show?: string;
+  breakdown: { tier: TicketTier; admits: number }[];
+} {
+  const ticketOf = (li: OrderLine): { show: string; tier: TicketTier } | undefined =>
+    ticketProduct(li.productId) ??
+    (channel === 'booth' ? DOOR_TICKET_SKUS[(li.sku || '').trim().toUpperCase()] : undefined);
   const admitsByTier = new Map<TicketTier, number>();
+  const shows = new Set<string>();
   for (const li of lines) {
-    const tier = tierOf(li);
-    if (!tier) continue;
-    admitsByTier.set(tier, (admitsByTier.get(tier) ?? 0) + (li.qty ?? 1));
+    const t = ticketOf(li);
+    if (!t) continue;
+    shows.add(t.show);
+    admitsByTier.set(t.tier, (admitsByTier.get(t.tier) ?? 0) + (li.qty ?? 1));
   }
   const admits = [...admitsByTier.values()].reduce((n, c) => n + c, 0);
   if (!admits) return { admits: 0, breakdown: [] };
+  // Checkout refuses mixed-show carts, and a booth cart can only ring up door
+  // tickets for one night. If one slips through anyway, the order admits to
+  // the first show only — log it so someone can split it by hand.
+  if (shows.size > 1) console.error('[webhook] ticket order spans shows:', [...shows].join(', '));
   const breakdown = TIER_PRIORITY.filter((t) => admitsByTier.has(t)).map((t) => ({
     tier: t,
     admits: admitsByTier.get(t)!,
   }));
-  return { admits, tier: breakdown[0]?.tier, breakdown };
+  return { admits, tier: breakdown[0]?.tier, show: [...shows][0], breakdown };
 }
 
 /* ------------------------------------------------------------------ *
@@ -510,7 +519,7 @@ async function handleCheckoutCompleted(
 
   // Live-show ticketing: if this order includes a ticket/bundle, stamp a QR
   // code + tier + admit count so it becomes a scannable pass at the door.
-  const { admits, tier: ticketTier, breakdown } = ticketSummary(lineItems, 'web');
+  const { admits, tier: ticketTier, show, breakdown } = ticketSummary(lineItems, 'web');
   const isTicketOrder = admits > 0;
   const ticketCode = isTicketOrder ? crypto.randomUUID() : undefined;
   // A cart that mixes tiers (one VIP + one GA, say) would otherwise flatten to
@@ -528,7 +537,9 @@ async function handleCheckoutCompleted(
     // stashes it in session metadata instead.
     customerName: session.customer_details?.name ?? session.metadata?.buyerName ?? ship?.name ?? null,
     lineItems,
-    ...(isTicketOrder ? { ticketTier, admits, ticketCode, ...(ticketBreakdown ? { ticketBreakdown } : {}) } : {}),
+    ...(isTicketOrder
+      ? { show, ticketTier, admits, ticketCode, ...(ticketBreakdown ? { ticketBreakdown } : {}) }
+      : {}),
     amountSubtotal: fromCents(session.amount_subtotal),
     amountShipping: fromCents(session.total_details?.amount_shipping),
     amountTax: fromCents(session.total_details?.amount_tax),
@@ -583,7 +594,7 @@ async function handleCheckoutCompleted(
 
   // Push ticket buyers into HubSpot (best effort; never blocks the 200).
   if (isTicketOrder && ticketTier) {
-    await hubspotSetAttendeeTier(env, orderDoc.email, orderDoc.customerName, ticketTier);
+    await hubspotSetAttendeeTier(env, orderDoc.email, orderDoc.customerName, ticketTier, show);
   }
 
   // Confirmation + admin alert (best effort; never blocks the 200).
@@ -596,12 +607,17 @@ async function handleCheckoutCompleted(
   // Does this order contain anything that actually ships (i.e. real merch,
   // not the ticket or the pickup-at-show bundle)? Drives the closing line.
   const hasShippableMerch = lineItems.some(
-    (li) => li.productId && !TICKET_TIER_BY_PRODUCT_ID[li.productId],
+    (li) => li.productId && !ticketProduct(li.productId),
   );
+  const showDoc = isTicketOrder ? showInfo(show) : undefined;
+  const showWhen = showDoc ? `${showDoc.dateText} at ${showDoc.venue}` : '';
+  const showDetails = showDoc
+    ? [showDoc.timesText, showDoc.age ? `${showDoc.age} — bring your ID` : ''].filter(Boolean).join(' · ')
+    : '';
   const closingHtml = hasShippableMerch
     ? `<p>We’ll email you again when it ships.</p>`
     : isTicketOrder
-      ? `<p>See you on September 19 at Dwell Coworking Manchaca Auditorium! 🎶</p>`
+      ? `<p>See you on ${showWhen}! 🎶</p>${showDetails ? `<p>${showDetails}</p>` : ''}`
       : '';
   // Ticket buyers get a prominent link to their scannable pass.
   const origin = new URL(requestUrl).origin;
@@ -613,7 +629,7 @@ async function handleCheckoutCompleted(
            } ticket${
              (admits ?? 1) > 1 ? `s (admits ${admits})` : ''
            }</strong></p>
-           <p style="margin:0 0 12px">Show this at the door on September 19 — save it or screenshot it:</p>
+           <p style="margin:0 0 12px">Show this at the door on ${showDoc?.dateText ?? 'show night'} — save it or screenshot it:</p>
            <p style="margin:0"><a href="${origin}/ticket?c=${ticketCode}">View your ticket &amp; QR code →</a></p>
          </div>`
       : '';
@@ -725,7 +741,7 @@ async function handleBoothCharge(env: Env, event: any): Promise<Response> {
   if (existing) return new Response('already processed', { status: 200 });
 
   const lineItems = await boothLinesFromCharge(env, charge);
-  const { admits, tier: ticketTier, breakdown } = ticketSummary(lineItems, 'booth');
+  const { admits, tier: ticketTier, show, breakdown } = ticketSummary(lineItems, 'booth');
   const isTicketOrder = admits > 0;
   const ticketBreakdown =
     breakdown.length > 1 ? breakdown.map((b, i) => ({ _key: `tier${i}`, _type: 'object' as const, ...b })) : undefined;
@@ -747,7 +763,7 @@ async function handleBoothCharge(env: Env, event: any): Promise<Response> {
     // door can check them in the same way as an advance buyer. It is not
     // emailed — they are already standing at the door.
     ...(isTicketOrder
-      ? { ticketTier, admits, ticketCode: crypto.randomUUID(), ...(ticketBreakdown ? { ticketBreakdown } : {}) }
+      ? { show, ticketTier, admits, ticketCode: crypto.randomUUID(), ...(ticketBreakdown ? { ticketBreakdown } : {}) }
       : {}),
     amountSubtotal: fromCents(charge.amount),
     amountShipping: 0,
@@ -774,7 +790,7 @@ async function handleBoothCharge(env: Env, event: any): Promise<Response> {
   await warnLowStock(env, lineItems).catch((e) => console.error('[webhook] low-stock check failed:', e));
 
   if (isTicketOrder && ticketTier && orderDoc.email) {
-    await hubspotSetAttendeeTier(env, orderDoc.email, orderDoc.customerName, ticketTier);
+    await hubspotSetAttendeeTier(env, orderDoc.email, orderDoc.customerName, ticketTier, show);
   }
   return new Response('ok', { status: 200 });
 }
@@ -794,9 +810,9 @@ async function findOrderByPaymentIntent(env: Env, pi: string): Promise<any | nul
     env,
     `*[_type == "order" && !(_id in path("drafts.**")) &&
        (_id == $id || stripePaymentIntentId == $pi)][0]{
-       _id, _rev, email, customerName, ticketTier, refundedAt, lineItems
+       _id, _rev, email, customerName, ticketTier, "show": coalesce(show, $legacy), refundedAt, lineItems
      }`,
-    { id: `order-${pi}`, pi },
+    { id: `order-${pi}`, pi, legacy: LEGACY },
   );
   if (direct?._id) return direct;
 
@@ -807,9 +823,9 @@ async function findOrderByPaymentIntent(env: Env, pi: string): Promise<any | nul
     return await sanityQuery<any>(
       env,
       `*[_type == "order" && !(_id in path("drafts.**")) && _id == $id][0]{
-         _id, _rev, email, customerName, ticketTier, refundedAt, lineItems
+         _id, _rev, email, customerName, ticketTier, "show": coalesce(show, $legacy), refundedAt, lineItems
        }`,
-      { id: `order-${sessionId}` },
+      { id: `order-${sessionId}`, legacy: LEGACY },
     );
   } catch (e) {
     console.error('[webhook] session lookup for refund failed:', e);
@@ -882,19 +898,22 @@ async function handleRefund(env: Env, event: any): Promise<Response> {
   }
 
   // Un-invite the buyer in HubSpot so the CRM matches the door list — unless
-  // they still hold another live ticket, in which case restore that tier.
+  // they still hold another live ticket FOR THE SAME SHOW, in which case
+  // restore that tier. Each show has its own HubSpot property.
   if (order.ticketTier && order.email) {
     const stillHolds = await sanityQuery<string | null>(
       env,
       `*[_type == "order" && !(_id in path("drafts.**")) && email == $email &&
-         defined(ticketCode) && !defined(refundedAt) && _id != $id][0].ticketTier`,
-      { email: order.email, id: order._id },
+         defined(ticketCode) && !defined(refundedAt) && _id != $id &&
+         coalesce(show, $legacy) == $show][0].ticketTier`,
+      { email: order.email, id: order._id, show: order.show, legacy: LEGACY },
     ).catch(() => null);
     await hubspotSetAttendeeTier(
       env,
       order.email,
       order.customerName ?? null,
       (stillHolds as TicketTier) || '',
+      order.show,
     );
   }
   return new Response('ok', { status: 200 });
