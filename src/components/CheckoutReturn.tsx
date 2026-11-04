@@ -118,8 +118,12 @@ export default function CheckoutReturn() {
           // polling for the QR must not throw the buyer onto the error page
           // with an emptied cart — the ticket reaches them by email anyway.
           try {
-            for (let i = 0; i < 6 && !cancelled; i++) {
-              await new Promise((r) => setTimeout(r, 2000));
+            // The status endpoint fulfils the order itself when Stripe's
+            // webhook is late, so this almost never loops. Keep trying for a
+            // full minute anyway, quickly at first, so a slow write still
+            // renders the QR on this page instead of "check your inbox".
+            for (let i = 0; i < 30 && !cancelled; i++) {
+              await new Promise((r) => setTimeout(r, i < 5 ? 1000 : 2000));
               if (cancelled) return;
               const again = await lookup();
               if (again.ticket?.ticketCode) {

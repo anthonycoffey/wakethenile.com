@@ -1,21 +1,14 @@
 /**
  * Cloudflare Pages Function — GET /api/checkout-session?session_id=...
- * Returns the status of a Checkout Session for the return page (display only;
- * fulfillment happens via the Stripe webhook). Also reports whether the order
- * is a ticket purchase and, once the webhook has recorded it, the ticketCode so
- * the thank-you page can show the QR pass. Edge-native raw fetch.
+ * Returns the status of a Checkout Session for the return page. For a paid
+ * ticket order it also returns the ticketCode so the thank-you page shows the
+ * QR at once — fulfilling the order itself if Stripe's webhook hasn't yet
+ * (server/fulfillment.ts). Edge-native raw fetch.
  */
 import { TICKET_PRODUCT_IDS, showInfo } from '../../src/lib/shows';
+import { fulfillCheckoutSession, type Env } from '../../server/fulfillment';
 
 const STRIPE_VERSION = '2026-06-24.dahlia';
-
-interface Env {
-  STRIPE_SECRET_KEY?: string;
-  SANITY_PROJECT_ID?: string;
-  SANITY_DATASET?: string;
-  SANITY_API_VERSION?: string;
-  SANITY_WRITE_TOKEN?: string;
-}
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -71,14 +64,31 @@ export const onRequestGet = async (context: { request: Request; env: Env }): Pro
     TICKET_PRODUCT_IDS.has(li.price?.product?.metadata?.productId ?? ''),
   );
 
-  // Once the webhook has written the order, surface the ticket code for the QR.
+  // Surface the ticket code for the QR. If Stripe's webhook hasn't recorded
+  // the order yet, record it right here instead of making the buyer wait on
+  // it — see server/fulfillment.ts for why racing the webhook is safe (one
+  // order, one stock move, one email, whoever lands first).
   let ticket: { ticketCode: string; ticketTier: string; admits: number; showDate: string | null } | null = null;
+  const paid = session.payment_status === 'paid' || session.payment_status === 'no_payment_required';
   if (session.status === 'complete' && hasTicket) {
-    const order = await sanityQuery<{ ticketCode?: string; ticketTier?: string; admits?: number; show?: string }>(
-      env,
-      `*[_type == "order" && !(_id in path("drafts.**")) && stripeSessionId == $sid && !defined(refundedAt)][0]{ ticketCode, ticketTier, admits, show }`,
-      { sid: sessionId },
-    );
+    type TicketRow = { ticketCode?: string; ticketTier?: string; admits?: number; show?: string };
+    const findOrder = () =>
+      sanityQuery<TicketRow>(
+        env,
+        `*[_type == "order" && !(_id in path("drafts.**")) && stripeSessionId == $sid && !defined(refundedAt)][0]{ ticketCode, ticketTier, admits, show }`,
+        { sid: sessionId },
+      );
+    let order = await findOrder();
+    if (!order && paid && env.SANITY_WRITE_TOKEN) {
+      try {
+        await fulfillCheckoutSession(env, sessionId, new URL(request.url).origin, null);
+      } catch (e) {
+        // The webhook is still on its way and will fulfil it; the page keeps
+        // polling. Never fail the thank-you page over this.
+        console.error('[checkout-session] inline fulfilment failed:', e);
+      }
+      order = await findOrder();
+    }
     if (order?.ticketCode) {
       ticket = {
         ticketCode: order.ticketCode,

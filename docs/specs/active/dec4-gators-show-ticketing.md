@@ -52,6 +52,24 @@ until merge, production renders the row with a plain "Get Tickets" link back to 
 The home page "Get Tickets" button is no longer Sanity content: it follows the registry and deep-links
 to `/shows#tickets-<id>` while the next show is on sale online ("Dec 4 with Gators — Get Tickets").
 
+## Ticket delivery: instant QR, one email
+
+Found in the first preview test purchase: the thank-you page sat on "Preparing your ticket…" because
+the QR only existed once Stripe's webhook landed. That made it hostage to webhook latency and to where
+Stripe routes the event (in test mode it doesn't reach branch previews at all).
+
+- **Fulfilment moved to `server/fulfillment.ts`**, shared by the webhook and `/api/checkout-session`.
+  When the thank-you page asks about a paid ticket session that has no order yet, it fulfils the order
+  itself, so the QR renders on first load. Racing the webhook is safe: the order is written with
+  `create` on a deterministic `_id`, so exactly one caller wins; the loser rolls back (stock included)
+  and returns before sending email.
+- **One confirmation email, and it is the ticket.** Subject "Your ticket — Wake the Nile, December 4".
+  The QR is in the body as an HTML table (mail clients strip SVG and block images; a hosted QR image
+  would leak the bearer code). It encodes the same `/ticket?c=` URL, so the door phone scans the email
+  or the ticket page the same way as Sep 19. Copy says "Nothing ships — this email is your ticket" unless
+  the order also has shippable merch. ~35 KB, under Gmail's ~102 KB clipping limit.
+- The thank-you page keeps polling for up to a minute (1 s, then 2 s) as a backstop.
+
 ## Backend changes (per ADR 0009)
 
 | File | Change |
