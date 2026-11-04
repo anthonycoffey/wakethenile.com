@@ -69,6 +69,12 @@ Stripe routes the event (in test mode it doesn't reach branch previews at all).
   or the ticket page the same way as Sep 19. Copy says "Nothing ships — this email is your ticket" unless
   the order also has shippable merch. ~35 KB, under Gmail's ~102 KB clipping limit.
 - The thank-you page keeps polling for up to a minute (1 s, then 2 s) as a backstop.
+- **Ticket repair.** The second preview test showed a stale deployment (pre-#61 code, on a separate
+  Stripe test account's webhook) winning the race and writing a ticketless merch order. If an order
+  exists with ticket products but no `ticketCode` and isn't refunded, fulfilment now stamps the ticket
+  onto it (revision-pinned, fills in only a *missing* ticket) and sends the ticket email. On the preview
+  that means the buyer may also get the stale copy's merch email; production has one webhook, running
+  this code, so it sends one.
 
 ## Backend changes (per ADR 0009)
 

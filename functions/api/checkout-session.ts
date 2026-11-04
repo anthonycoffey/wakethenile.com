@@ -79,7 +79,9 @@ export const onRequestGet = async (context: { request: Request; env: Env }): Pro
         { sid: sessionId },
       );
     let order = await findOrder();
-    if (!order && paid && env.SANITY_WRITE_TOKEN) {
+    // No order yet, or an order with no ticket on it (written by code that
+    // didn't know this show) — fulfilment creates or repairs it.
+    if (!order?.ticketCode && paid && env.SANITY_WRITE_TOKEN) {
       try {
         await fulfillCheckoutSession(env, sessionId, new URL(request.url).origin, null);
       } catch (e) {

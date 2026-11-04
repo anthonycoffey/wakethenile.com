@@ -446,6 +446,104 @@ function ticketSummary(
  * Web store: checkout.session.completed
  * ------------------------------------------------------------------ */
 
+/**
+ * The ticket confirmation. Ticket orders get ONE email and it IS the ticket:
+ * the scannable QR sits in the body (it encodes the same /ticket URL as the
+ * ticket page, so the door phone scans either), with a link as a fallback.
+ * Nothing ships unless the order also carries real merch.
+ */
+function ticketEmail(o: {
+  origin: string;
+  ticketCode: string;
+  ticketTier: TicketTier | undefined;
+  admits: number | undefined;
+  show: string | undefined;
+  itemsHtml: string;
+  total: string;
+  hasShippableMerch: boolean;
+}): { subject: string; html: string } {
+  const showDoc = showInfo(o.show);
+  const showWhen = showDoc ? `${showDoc.dateText} at ${showDoc.venue}` : 'the show';
+  const showDetails = showDoc
+    ? [showDoc.timesText, showDoc.age ? `${showDoc.age} — bring your ID` : ''].filter(Boolean).join(' · ')
+    : '';
+  const ticketUrl = `${o.origin}/ticket?c=${o.ticketCode}`;
+  const tierWord = o.ticketTier === 'vip' ? 'VIP' : o.ticketTier === 'ga-plus' ? 'GA+ (free drinks!)' : 'GA';
+  const showHtml = showDoc
+    ? `<p style="margin:0 0 4px;font-size:18px"><strong>${showDoc.billing}</strong>${showDoc.support ? ` ${showDoc.support}` : ''}</p>
+       <p style="margin:0 0 4px">${showDoc.dateText} · ${showDoc.venue} · ${showDoc.city}</p>
+       ${showDetails ? `<p style="margin:0">${showDetails}</p>` : ''}`
+    : '';
+  return {
+    subject: `Your ticket — Wake the Nile, ${showDoc?.dateText ?? 'live'}`,
+    html: `<h2>You’re in! 🎶</h2>
+      <div style="margin:20px 0;padding:20px 16px;border:2px solid #caa04a;border-radius:10px;text-align:center">
+        ${showHtml}
+        <p style="margin:16px 0 12px"><strong>🎟️ ${tierWord} ticket${(o.admits ?? 1) > 1 ? ` — admits ${o.admits}` : ''}</strong></p>
+        ${qrEmailTable(ticketUrl, { cellSize: 6, margin: 4 })}
+        <p style="margin:12px 0 4px"><strong>Show this QR code at the door.</strong></p>
+        <p style="margin:0;font-size:13px">Can’t see the code? <a href="${ticketUrl}">Open your ticket →</a></p>
+      </div>
+      <p style="margin:16px 0 4px"><strong>Your order</strong></p>
+      <ul>${o.itemsHtml}</ul>
+      <p><strong>Total: $${o.total}</strong></p>
+      ${o.hasShippableMerch
+        ? `<p>We’ll email you again when your merch ships.</p>`
+        : `<p>Nothing ships — this email is your ticket. See you on ${showWhen}!</p>`}`,
+  };
+}
+
+/**
+ * An order for this session already exists but carries no ticket even though
+ * it contains ticket products — written by code that didn't know this show
+ * (e.g. a stale deployment answering Stripe's webhook first). Stamp the
+ * ticket onto it and send the ticket email so the buyer still gets a QR.
+ * Pinned to the revision read, and only ever fills in a MISSING ticket, so
+ * two repairers (or a repair racing a refund) can't double-issue.
+ */
+async function repairMissingTicket(env: Env, orderId: string, origin: string): Promise<void> {
+  const order = await sanityQuery<any>(
+    env,
+    `*[_type == "order" && _id == $id][0]{ _rev, email, customerName, ticketCode, refundedAt, amountTotal, lineItems }`,
+    { id: orderId },
+  );
+  if (!order?._rev || order.ticketCode || order.refundedAt) return;
+  const lines: OrderLine[] = order.lineItems ?? [];
+  const { admits, tier: ticketTier, show, breakdown } = ticketSummary(lines, 'web');
+  if (!admits) return;
+  const ticketCode = crypto.randomUUID();
+  const ticketBreakdown =
+    breakdown.length > 1 ? breakdown.map((b, i) => ({ _key: `tier${i}`, _type: 'object' as const, ...b })) : undefined;
+  try {
+    await sanityMutate(env, [
+      {
+        patch: {
+          id: orderId,
+          ifRevisionID: order._rev,
+          set: { channel: 'web', show, ticketTier, admits, ticketCode, ...(ticketBreakdown ? { ticketBreakdown } : {}) },
+        },
+      },
+    ]);
+  } catch (e) {
+    // Someone else changed it first (another repair, a refund) — leave it.
+    console.error('[fulfillment] ticket repair lost a race:', orderId, e);
+    return;
+  }
+  console.error(`[fulfillment] repaired order ${orderId}: added missing ${show} ticket`);
+  if (ticketTier) await hubspotSetAttendeeTier(env, order.email, order.customerName, ticketTier, show);
+  if (!order.email) return;
+  const settings = await sanityQuery<any>(env, SETTINGS_QUERY, {}).catch(() => null);
+  const itemsHtml = lines
+    .map((li) => `<li>${li.qty}× ${li.title} — $${(li.unitAmount ?? 0).toFixed(2)}</li>`)
+    .join('');
+  const mail = ticketEmail({
+    origin, ticketCode, ticketTier, admits, show, itemsHtml,
+    total: (order.amountTotal ?? 0).toFixed(2),
+    hasShippableMerch: lines.some((li) => li.productId && !ticketProduct(li.productId)),
+  });
+  await sendEmail(env, settings?.fromEmail, [order.email], mail.subject, mail.html);
+}
+
 export async function handleCheckoutCompleted(
   env: Env,
   event: any,
@@ -476,7 +574,12 @@ export async function fulfillCheckoutSession(
     `*[_type == "order" && _id == $id][0]._id`,
     { id: orderId },
   );
-  if (existing) return new Response('already processed', { status: 200 });
+  if (existing) {
+    await repairMissingTicket(env, orderId, origin).catch((e) =>
+      console.error('[fulfillment] ticket repair failed:', e),
+    );
+    return new Response('already processed', { status: 200 });
+  }
 
   // Authoritative session data + line items (product metadata carries our ids).
   const session = await stripeGet(
@@ -623,50 +726,14 @@ export async function fulfillCheckoutSession(
   const hasShippableMerch = lineItems.some(
     (li) => li.productId && !ticketProduct(li.productId),
   );
-  const showDoc = isTicketOrder ? showInfo(show) : undefined;
-  const showWhen = showDoc ? `${showDoc.dateText} at ${showDoc.venue}` : '';
-  const showDetails = showDoc
-    ? [showDoc.timesText, showDoc.age ? `${showDoc.age} — bring your ID` : ''].filter(Boolean).join(' · ')
-    : '';
-  // Merch-only orders (ticket orders get their own email below).
+  // Merch-only orders (ticket orders get their own email — ticketEmail()).
   const closingHtml = hasShippableMerch ? `<p>We’ll email you again when it ships.</p>` : '';
-  // Ticket orders get ONE email, and it IS the ticket: the scannable QR sits
-  // in the body (it encodes the same /ticket URL as the ticket page, so the
-  // door phone scans either), with a link as a fallback. Nothing ships unless
-  // the order also carries real merch.
-  const ticketUrl = ticketCode ? `${origin}/ticket?c=${ticketCode}` : '';
-  const tierWord = ticketTier === 'vip' ? 'VIP' : ticketTier === 'ga-plus' ? 'GA+ (free drinks!)' : 'GA';
-  const showHtml = showDoc
-    ? `<p style="margin:0 0 4px;font-size:18px"><strong>${showDoc.billing}</strong>${showDoc.support ? ` ${showDoc.support}` : ''}</p>
-       <p style="margin:0 0 4px">${showDoc.dateText} · ${showDoc.venue} · ${showDoc.city}</p>
-       ${showDetails ? `<p style="margin:0">${showDetails}</p>` : ''}`
-    : '';
-  const ticketHtml =
-    isTicketOrder && ticketCode
-      ? `<div style="margin:20px 0;padding:20px 16px;border:2px solid #caa04a;border-radius:10px;text-align:center">
-           ${showHtml}
-           <p style="margin:16px 0 12px"><strong>🎟️ ${tierWord} ticket${(admits ?? 1) > 1 ? ` — admits ${admits}` : ''}</strong></p>
-           ${qrEmailTable(ticketUrl, { cellSize: 6, margin: 4 })}
-           <p style="margin:12px 0 4px"><strong>Show this QR code at the door.</strong></p>
-           <p style="margin:0;font-size:13px">Can’t see the code? <a href="${ticketUrl}">Open your ticket →</a></p>
-         </div>`
-      : '';
   if (orderDoc.email) {
-    if (isTicketOrder) {
-      await sendEmail(
-        env,
-        from,
-        [orderDoc.email],
-        `Your ticket — Wake the Nile, ${showDoc?.dateText ?? 'live'}`,
-        `<h2>You’re in! 🎶</h2>
-         ${ticketHtml}
-         <p style="margin:16px 0 4px"><strong>Your order</strong></p>
-         <ul>${itemsHtml}</ul>
-         <p><strong>Total: $${total}</strong></p>
-         ${hasShippableMerch
-           ? `<p>We’ll email you again when your merch ships.</p>`
-           : `<p>Nothing ships — this email is your ticket. See you on ${showWhen}!</p>`}`,
-      );
+    if (isTicketOrder && ticketCode) {
+      const mail = ticketEmail({
+        origin, ticketCode, ticketTier, admits, show, itemsHtml, total, hasShippableMerch,
+      });
+      await sendEmail(env, from, [orderDoc.email], mail.subject, mail.html);
     } else {
       await sendEmail(env, from, [orderDoc.email], 'Your Wake the Nile order is confirmed', `
         <h2>Thank you for your order!</h2>
