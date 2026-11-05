@@ -47,8 +47,10 @@ export const onRequestGet = async (context: { request: Request; env: Env }): Pro
 
   // Header only — a PIN in a query string is written to edge logs, browser
   // history and outbound Referer headers.
-  const pin = request.headers.get('x-staff-pin') || '';
-  if (!pin || !safeEqual(pin, env.STAFF_PIN)) return json({ error: 'Wrong door PIN.' }, 401);
+  // Trim both sides: a stray space pasted into the Cloudflare setting or typed
+  // by a phone keyboard shouldn't lock the door out.
+  const pin = (request.headers.get('x-staff-pin') || '').trim();
+  if (!pin || !safeEqual(pin, env.STAFF_PIN.trim())) return json({ error: 'Wrong door PIN.' }, 401);
 
   // One show's door list at a time (ADR 0009). ?shows=1 returns just the
   // show picker (every registered show, its door status and headcount);

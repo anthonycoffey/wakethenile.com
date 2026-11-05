@@ -156,7 +156,7 @@ export default function AttendeeList() {
         className="att__lock"
         onSubmit={(e) => {
           e.preventDefault();
-          if (pinInput) loadShows(pinInput);
+          if (pinInput.trim()) loadShows(pinInput.trim());
         }}
       >
         <h1 className="att__title">Attendees</h1>

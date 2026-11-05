@@ -74,8 +74,9 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
   } catch {
     return json({ error: 'Invalid request.' }, 400);
   }
-  const { code, pin, undo } = body;
-  if (!pin || !safeEqual(pin, env.STAFF_PIN)) return json({ error: 'Wrong door PIN.' }, 401);
+  const { code, undo } = body;
+  const pin = (body.pin || '').trim();
+  if (!pin || !safeEqual(pin, env.STAFF_PIN.trim())) return json({ error: 'Wrong door PIN.' }, 401);
   if (!code) return json({ error: 'Missing ticket code.' }, 400);
   const party = Math.max(1, Math.min(20, Math.floor(Number(body.party) || 1)));
   // Free-text label from the door device, so a disputed scan can be traced to
