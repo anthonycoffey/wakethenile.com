@@ -54,6 +54,7 @@ const STATUS_TEXT: Record<ShowStatus, string> = {
 export default function AttendeeList() {
   const [status, setStatus] = useState<Status>('locked');
   const [pinInput, setPinInput] = useState('');
+  const [pinVisible, setPinVisible] = useState(false);
   const [rows, setRows] = useState<Attendee[]>([]);
   const [q, setQ] = useState('');
   const [err, setErr] = useState<string | null>(null);
@@ -162,13 +163,20 @@ export default function AttendeeList() {
         <h1 className="att__title">Attendees</h1>
         <p className="att__sub">Staff only — enter the door PIN.</p>
         <input
-          type="password"
+          type={pinVisible ? 'text' : 'password'}
           className="att__pin"
           placeholder="Door PIN"
           value={pinInput}
           onChange={(e) => setPinInput(e.target.value)}
+          autoCapitalize="off"
+          autoCorrect="off"
+          autoComplete="off"
+          spellCheck={false}
           autoFocus
         />
+        <label className="att__showpin">
+          <input type="checkbox" checked={pinVisible} onChange={(e) => setPinVisible(e.target.checked)} /> Show PIN
+        </label>
         <button type="submit" className="att__btn">Unlock</button>
         {err && <p className="att__err">{err}</p>}
         {status === 'error' && !err && <p className="att__err">Couldn’t load — check the connection and try again.</p>}
