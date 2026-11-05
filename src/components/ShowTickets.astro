@@ -146,11 +146,8 @@ const details = [show.timesText, show.age].filter(Boolean).join(' · ');
         unitPrice: current.price,
         qty,
       });
-      // Same GA path as the album release: a nudge to grab merch (picked up at
-      // the show, 15% off) before checkout. See merch.astro / CheckoutCustom.
-      sessionStorage.setItem('wtn_upsell_msg', '1');
-      sessionStorage.setItem('wtn_promo', 'WTN15OFF');
-      window.location.href = '/merch';
+      // Straight to checkout: no merch detour or promo nudge for this show.
+      window.location.href = '/checkout';
     });
 
     const toggle = document.querySelector<HTMLButtonElement>(`[data-tix-toggle="${showId}"]`);

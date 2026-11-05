@@ -7,7 +7,7 @@ import { sanityFetch } from '../lib/sanity';
 import { allProductsQuery } from '../lib/queries';
 import { urlForWidth } from '../lib/sanityImage';
 import { getStoreStatus } from '../lib/store';
-import { TICKET_PRODUCT_IDS } from '../lib/tickets';
+import { RETIRED_PRODUCT_IDS, TICKET_PRODUCT_IDS } from '../lib/tickets';
 import type { ProductCardData } from '../lib/types';
 
 const { open, settings } = await getStoreStatus();
@@ -29,7 +29,9 @@ if (open) {
   // Tickets (every show's tiers, including the VIP Fan Experience, which
   // bundles a ticket) are sold from /shows, never the store grid. The
   // standalone Ultimate Fan Merch Bundle and all other merch stay.
-  const catalog = products.filter((p) => !TICKET_PRODUCT_IDS.has(p._id));
+  const catalog = products.filter(
+    (p) => !TICKET_PRODUCT_IDS.has(p._id) && !RETIRED_PRODUCT_IDS.has(p._id),
+  );
   items = catalog.map((p) => ({
     id: p._id,
     slug: p.slug ?? '',

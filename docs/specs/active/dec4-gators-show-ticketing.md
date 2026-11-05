@@ -41,8 +41,11 @@ ticket panel on its `/shows` row instead of an external "Get Tickets" link:
   `dec4-ga-early` at $20 and shows "Early bird — N left"; after that it sells `dec4-ga` at $30. When
   both are 0 it shows "Sold out online — tickets at the door ($30)". If the call fails it falls back to
   the stock baked in at build time; checkout re-validates either way.
-- Adding to cart follows the GA path that worked on Sep 19: nudge to `/merch` (upsell banner +
-  `WTN15OFF` merch promo) before checkout.
+- "Add to cart" goes **straight to `/checkout`**: no `/merch` detour, upsell banner or merch promo
+  (changed 2026-11-05 at the owner's request; the Sep 19 flow nudged to `/merch` first).
+- The Album Release Show Poster (`product-tour-poster`) is retired from the store
+  (`RETIRED_PRODUCT_IDS` in `src/lib/tickets.ts`): out of the `/merch` grid, and its product link
+  redirects to `/merch`. The Sanity doc stays so past orders resolve.
 - `/albumrelease`, `/releaseparty`, `/superfans` already 301 to `/shows`, so old ad links land here.
 
 A Sanity `show` document (`show-2026-12-04`) drives the row itself (title, date, city). Preview and

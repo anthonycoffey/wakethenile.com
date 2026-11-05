@@ -12,3 +12,10 @@ export { TICKET_PRODUCT_IDS };
  */
 export const EARLY_BIRD_SOLD_OUT = !SHOWS[LEGACY_SHOW_ID].onlineSales;
 
+/**
+ * Merch retired from the store (not in the grid; old product links go back to
+ * /merch). The Sanity docs stay so past orders still resolve.
+ * - product-tour-poster: Album Release Show Poster, Sep 19 show only.
+ */
+export const RETIRED_PRODUCT_IDS = new Set<string>(['product-tour-poster']);
+
