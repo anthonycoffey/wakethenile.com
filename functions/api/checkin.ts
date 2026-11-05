@@ -13,7 +13,7 @@
  * Writes are pinned with `ifRevisionID` so two lanes scanning the same code
  * at once can't both succeed. Edge-native.
  */
-import { LEGACY_SHOW_ID, doorShowAt, showInfo } from '../../src/lib/shows';
+import { LEGACY_SHOW_ID, checkinOpen, doorShowAt, showEnded, showInfo } from '../../src/lib/shows';
 
 interface Env {
   SANITY_PROJECT_ID?: string;
@@ -109,17 +109,21 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
   if (order.fulfillmentStatus === 'cancelled') {
     return json({ error: 'Cancelled ticket — do not admit.' }, 410);
   }
-  // A ticket only admits to its own night (ADR 0009). The door show is
-  // decided here from the clock, never by the client, so a stale door phone
-  // can't wave an old show's QR through. Undo stays allowed so a mistaken
-  // scan can always be reversed.
-  const doorShow = doorShowAt();
-  if (!undo && order.show !== doorShow.id) {
+  // A ticket only admits to its own night (ADR 0009), and only while that
+  // night's door is open. Decided here from the clock, never by the client,
+  // so a stale door phone can't wave an old show's QR through. Undo is held
+  // to the same rule: once a show is over its door record is frozen.
+  if (!checkinOpen(order.show)) {
     const theirs = showInfo(order.show);
+    const doorShow = doorShowAt();
+    const ended = theirs ? showEnded(theirs) : true;
     return json(
       {
-        error: `Wrong show — this ticket is for ${theirs?.label ?? order.show}. Do not admit.`,
+        error: ended
+          ? `Check-in closed — this ticket was for ${theirs?.label ?? order.show}, which has ended. Do not admit.`
+          : `Wrong show — this ticket is for ${theirs?.label ?? order.show}. Do not admit.`,
         wrongShow: true,
+        checkinClosed: true,
         ticketShow: theirs?.label ?? order.show,
         doorShow: doorShow.label,
       },

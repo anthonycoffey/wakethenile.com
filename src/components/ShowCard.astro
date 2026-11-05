@@ -129,6 +129,15 @@ const sellHere = !isPast && !show.soldOut && !!ours?.onlineSales;
   .show.is-past {
     opacity: 0.5;
   }
+  /* ...and a quiet strike-through on what's over: thin, half-strength, so it
+     reads as "done" without shouting. The button keeps its own disabled look. */
+  .show.is-past .show-title,
+  .show.is-past .show-date,
+  .show.is-past .show-location {
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
+    text-decoration-color: color-mix(in srgb, currentColor 60%, transparent);
+  }
   .tickets-button.is-disabled {
     color: var(--muted);
     border-color: var(--muted);

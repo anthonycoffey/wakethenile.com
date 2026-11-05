@@ -135,6 +135,30 @@ export function doorShowAt(now: number = Date.now()): ShowInfo {
   return ordered.find((s) => now < Date.parse(s.startsAt) + DOOR_WINDOW_MS) ?? ordered[ordered.length - 1];
 }
 
+/** True once a show's door window (doors + 12 h) has closed. */
+export const showEnded = (show: ShowInfo, now: number = Date.now()): boolean =>
+  now >= Date.parse(show.startsAt) + DOOR_WINDOW_MS;
+
+/**
+ * Can tickets for this show be checked in (or un-checked) right now? Only
+ * the door show, and only until its window closes — so a past show's list
+ * is frozen for good, including the LAST show once it's over (doorShowAt
+ * still returns it, for the attendee list default, but its door is shut).
+ */
+export function checkinOpen(showId: string | null | undefined, now: number = Date.now()): boolean {
+  const show = SHOWS[showId || LEGACY_SHOW_ID];
+  if (!show) return false;
+  return doorShowAt(now).id === show.id && !showEnded(show, now);
+}
+
+export type ShowStatus = 'open' | 'upcoming' | 'past';
+
+/** Staff-facing state of a show: door open now, later, or done. */
+export function showStatus(show: ShowInfo, now: number = Date.now()): ShowStatus {
+  if (checkinOpen(show.id, now)) return 'open';
+  return showEnded(show, now) ? 'past' : 'upcoming';
+}
+
 /** The registry entry behind a Sanity `show` document, if we sell it. */
 export const showForSanityDoc = (sanityId: string | null | undefined): ShowInfo | undefined =>
   sanityId ? Object.values(SHOWS).find((s) => s.sanityShowId === sanityId) : undefined;

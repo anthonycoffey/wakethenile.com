@@ -5,7 +5,7 @@
  * admits, check-in status, sales channel) for the /attendees page + CSV
  * export. Refunded orders are excluded. PIN-gated. Edge-native.
  */
-import { LEGACY_SHOW_ID, SHOWS, doorShowAt } from '../../src/lib/shows';
+import { LEGACY_SHOW_ID, SHOWS, doorShowAt, showStatus } from '../../src/lib/shows';
 
 interface Env {
   SANITY_PROJECT_ID?: string;
@@ -50,13 +50,51 @@ export const onRequestGet = async (context: { request: Request; env: Env }): Pro
   const pin = request.headers.get('x-staff-pin') || '';
   if (!pin || !safeEqual(pin, env.STAFF_PIN)) return json({ error: 'Wrong door PIN.' }, 401);
 
-  // One show's door list at a time (ADR 0009). Defaults to the show the door
-  // is admitting tonight; ?show= picks any other registered show.
-  const requested = new URL(request.url).searchParams.get('show');
+  // One show's door list at a time (ADR 0009). ?shows=1 returns just the
+  // show picker (every registered show, its door status and headcount);
+  // ?show=<id> returns that show's list, defaulting to tonight's door show.
+  const params = new URL(request.url).searchParams;
+  const describe = (s: (typeof SHOWS)[string]) => ({
+    id: s.id,
+    label: s.label,
+    dateText: s.dateText,
+    venue: s.venue,
+    // 'open' = the door is admitting this show; 'past' = frozen, view only.
+    status: showStatus(s),
+  });
+
+  if (params.get('shows') === '1') {
+    const ordered = Object.values(SHOWS).sort((a, b) => Date.parse(b.startsAt) - Date.parse(a.startsAt));
+    let counts: Record<string, { tickets: number; admits: number; inRoom: number }> = {};
+    try {
+      // One round trip: a GROQ object keyed by show id.
+      const live = `_type == "order" && !(_id in path("drafts.**")) && defined(ticketCode) && !defined(refundedAt) && fulfillmentStatus != "cancelled"`;
+      counts = await sanityQuery(
+        env,
+        `{${ordered
+          .map(
+            (s, i) =>
+              `"${s.id}": { "tickets": count(*[${live} && coalesce(show, $legacy) == $s${i}]), "admits": math::sum(*[${live} && coalesce(show, $legacy) == $s${i}].admits), "inRoom": math::sum(*[${live} && coalesce(show, $legacy) == $s${i}].admitted) }`,
+          )
+          .join(',')}}`,
+        Object.fromEntries([['legacy', LEGACY_SHOW_ID], ...ordered.map((s, i) => [`s${i}`, s.id])]),
+      );
+    } catch {
+      /* the picker still works without counts */
+    }
+    return json({
+      shows: ordered.map((s) => ({
+        ...describe(s),
+        tickets: counts[s.id]?.tickets ?? null,
+        admits: counts[s.id]?.admits ?? null,
+        inRoom: counts[s.id]?.inRoom ?? null,
+      })),
+      doorShow: doorShowAt().id,
+    });
+  }
+
+  const requested = params.get('show');
   const show = requested && SHOWS[requested] ? SHOWS[requested] : doorShowAt();
-  const shows = Object.values(SHOWS)
-    .sort((a, b) => Date.parse(b.startsAt) - Date.parse(a.startsAt))
-    .map((s) => ({ id: s.id, label: s.label }));
 
   let rows: Array<Record<string, unknown>>;
   try {
@@ -73,5 +111,5 @@ export const onRequestGet = async (context: { request: Request; env: Env }): Pro
   } catch {
     return json({ error: 'Lookup failed.' }, 502);
   }
-  return json({ attendees: rows ?? [], show: { id: show.id, label: show.label }, shows });
+  return json({ attendees: rows ?? [], show: describe(show) });
 };

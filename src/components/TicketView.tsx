@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { qrSvg } from '../lib/qr';
-import { doorShowAt } from '../lib/shows';
+import { SHOWS, checkinOpen, doorShowAt, showEnded } from '../lib/shows';
 
 type Tier = 'ga' | 'vip' | 'ga-plus';
 interface TierBreakdown {
@@ -234,7 +234,9 @@ export default function TicketView() {
   // makes the real call (/api/checkin refuses it regardless); this just stops
   // a queue forming behind a ticket that was never going to work tonight.
   const doorShow = doorShowAt();
-  const wrongShow = !!staffPin && !!ticket.show && ticket.show.id !== doorShow.id;
+  const doorOpen = !ticket.show || checkinOpen(ticket.show.id);
+  const wrongShow = !!staffPin && !doorOpen;
+  const showOver = !!ticket.show && !!SHOWS[ticket.show.id] && showEnded(SHOWS[ticket.show.id]);
 
   return (
     <div className={`ticket ${isVip ? 'ticket--vip' : isGaPlus ? 'ticket--ga-plus' : ''}`}>
@@ -250,7 +252,9 @@ export default function TicketView() {
           className="ticket__status"
           style={{ background: '#7f1d1d', color: '#fff', padding: '10px 14px', borderRadius: 8 }}
         >
-          ⛔ WRONG SHOW — this ticket is for {ticket.show!.label}, not {doorShow.label}. Do not admit.
+          {showOver
+            ? `⛔ CHECK-IN CLOSED — this ticket was for ${ticket.show!.label}, which has ended. Do not admit.`
+            : `⛔ WRONG SHOW — this ticket is for ${ticket.show!.label}, not ${doorShow.label}. Do not admit.`}
         </p>
       )}
       {ticket.name && <p className="ticket__name">{ticket.name}</p>}
@@ -286,7 +290,11 @@ export default function TicketView() {
 
       {/* Staff-only controls: visible once this device has unlocked the door PIN. */}
       <div className="ticket__staff">
-        {staffPin ? (
+        {staffPin && !doorOpen ? (
+          // Past or other-night ticket: no check-in or undo controls at all.
+          // The server refuses both regardless (/api/checkin).
+          <p className="ticket__checkinmsg">Check-in for this ticket is closed.</p>
+        ) : staffPin ? (
           <>
             {/* A party doesn't always arrive together, so staff say how many
                 are standing in front of them rather than burning the whole

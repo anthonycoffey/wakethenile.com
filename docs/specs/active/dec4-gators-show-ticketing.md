@@ -109,6 +109,19 @@ Stripe routes the event (in test mode it doesn't reach branch previews at all).
    the webhook retries the upsert without it, so the contact still lands.
 4. **Door PIN:** rotate `STAFF_PIN` in Cloudflare (Production + Preview) before doors.
 
+## Attendee lists per show; past shows frozen
+
+- `/attendees` → door PIN → **choose a show**. Each show card carries its status and headcount: **Check-in
+  open** (the door show), **Upcoming**, or **Past · check-in closed** (`GET /api/attendees?shows=1`).
+  Inside a show: a status banner, the list, CSV, and "← All shows". Past lists are view only.
+- **Check-in rule** (`checkinOpen()` in `src/lib/shows.ts`): a ticket can be checked in — or un-checked
+  — only if its show is the door show **and** that show's window (doors + 12 h) hasn't closed. So Sep 19
+  is frozen now, and Dec 4 freezes itself the morning after, even though it's the last registered show.
+  `/api/checkin` enforces it; the ticket page hides the check-in/undo buttons and shows "CHECK-IN CLOSED"
+  or "WRONG SHOW".
+- `/shows`: past shows keep their greyed row and disabled button, plus a thin strike-through on title,
+  date and city.
+
 ## Door night
 
 - The door phone opens `/attendees` → Dec 4 list by default. Scanning a QR opens `/ticket`, same as Sep 19.
