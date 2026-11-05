@@ -13,7 +13,7 @@ import { urlForWidth } from '../../lib/sanityImage';
 import { renderPortableText } from '../../lib/portableText';
 import { getStoreStatus } from '../../lib/store';
 import { bundleOptionGroupsFor } from '../../lib/bundleOptions';
-import { EARLY_BIRD_SOLD_OUT, TICKET_PRODUCT_IDS } from '../../lib/tickets';
+import { RETIRED_PRODUCT_IDS, TICKET_PRODUCT_IDS } from '../../lib/tickets';
 import type { Product } from '../../lib/types';
 
 // Live Show Ticket — mirrors the id used across checkout/webhook. Its variant
@@ -37,13 +37,13 @@ const product = open
   ? await sanityFetch<Product | null>(productBySlugQuery, { slug }, null)
   : null;
 
-if (open && !product) {
+if ((open && !product) || (product && RETIRED_PRODUCT_IDS.has(product._id))) {
   return Astro.redirect('/merch');
 }
 
-// Ticket products are no longer sold online; send anyone with an old link to
-// the shows page.
-if (EARLY_BIRD_SOLD_OUT && product && TICKET_PRODUCT_IDS.has(product._id)) {
+// Tickets are sold on /shows (open shows) or at the door (closed ones);
+// send anyone with an old product link there.
+if (product && TICKET_PRODUCT_IDS.has(product._id)) {
   return Astro.redirect('/shows');
 }
 

@@ -13,6 +13,8 @@
  * Writes are pinned with `ifRevisionID` so two lanes scanning the same code
  * at once can't both succeed. Edge-native.
  */
+import { LEGACY_SHOW_ID, checkinOpen, doorShowAt, showEnded, showInfo } from '../../src/lib/shows';
+
 interface Env {
   SANITY_PROJECT_ID?: string;
   SANITY_DATASET?: string;
@@ -72,8 +74,9 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
   } catch {
     return json({ error: 'Invalid request.' }, 400);
   }
-  const { code, pin, undo } = body;
-  if (!pin || !safeEqual(pin, env.STAFF_PIN)) return json({ error: 'Wrong door PIN.' }, 401);
+  const { code, undo } = body;
+  const pin = (body.pin || '').trim();
+  if (!pin || !safeEqual(pin, env.STAFF_PIN.trim())) return json({ error: 'Wrong door PIN.' }, 401);
   if (!code) return json({ error: 'Missing ticket code.' }, 400);
   const party = Math.max(1, Math.min(20, Math.floor(Number(body.party) || 1)));
   // Free-text label from the door device, so a disputed scan can be traced to
@@ -89,13 +92,14 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
     checkedInAt?: string | null;
     refundedAt?: string | null;
     fulfillmentStatus?: string | null;
+    show?: string | null;
     _rev?: string;
   } | null;
   try {
     order = await sanityQuery(
       env,
-      `*[_type == "order" && !(_id in path("drafts.**")) && ticketCode == $code][0]{ _id, _rev, customerName, ticketTier, admits, admitted, checkedInAt, refundedAt, fulfillmentStatus }`,
-      { code },
+      `*[_type == "order" && !(_id in path("drafts.**")) && ticketCode == $code][0]{ _id, _rev, customerName, ticketTier, admits, admitted, checkedInAt, refundedAt, fulfillmentStatus, "show": coalesce(show, $legacy) }`,
+      { code, legacy: LEGACY_SHOW_ID },
     );
   } catch {
     return json({ error: 'Lookup failed.' }, 502);
@@ -105,6 +109,27 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
   if (order.refundedAt) return json({ error: 'Refunded ticket — do not admit.' }, 410);
   if (order.fulfillmentStatus === 'cancelled') {
     return json({ error: 'Cancelled ticket — do not admit.' }, 410);
+  }
+  // A ticket only admits to its own night (ADR 0009), and only while that
+  // night's door is open. Decided here from the clock, never by the client,
+  // so a stale door phone can't wave an old show's QR through. Undo is held
+  // to the same rule: once a show is over its door record is frozen.
+  if (!checkinOpen(order.show)) {
+    const theirs = showInfo(order.show);
+    const doorShow = doorShowAt();
+    const ended = theirs ? showEnded(theirs) : true;
+    return json(
+      {
+        error: ended
+          ? `Check-in closed — this ticket was for ${theirs?.label ?? order.show}, which has ended. Do not admit.`
+          : `Wrong show — this ticket is for ${theirs?.label ?? order.show}. Do not admit.`,
+        wrongShow: true,
+        checkinClosed: true,
+        ticketShow: theirs?.label ?? order.show,
+        doorShow: doorShow.label,
+      },
+      410,
+    );
   }
 
   const admits = Math.max(1, order.admits ?? 1);

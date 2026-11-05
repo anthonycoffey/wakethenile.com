@@ -8,29 +8,17 @@
  * Prices/stock are ALWAYS re-read from Sanity here; the client cart only supplies
  * productId + sku + qty, never trusted amounts.
  */
+import { SHOWS, TICKET_PRODUCTS, ticketProduct } from '../../src/lib/shows';
+
 
 // Pinned to the Stripe SDK's API version so the value `embedded_page` and the
 // client libraries (@stripe/stripe-js) stay in lockstep.
 const STRIPE_VERSION = '2026-06-24.dahlia';
 
-// Products that unlock the "Pick up at Merch booth" shipping option — the
-// ticket/bundle products sold from /releaseparty and /albumrelease. Update
-// this set if those products are ever recreated with new IDs. See
-// docs/specs/active/albumrelease-ga-tiers.md for the full sync checklist.
-const PICKUP_ELIGIBLE_PRODUCT_IDS = new Set([
-  '2480f00d-9317-4ed0-9406-bcef1e34bc71', // Live Show Ticket
-  'b351d11f-4c78-4a1f-b36b-c10d951c96ea', // VIP Fan Experience (superfan bundle)
-  'albumrelease-ga', // GA (/albumrelease)
-  'albumrelease-ga-plus', // GA Plus (/albumrelease)
-]);
-
-// Early bird ticket kill switch. MIRRORS EARLY_BIRD_SOLD_OUT in
-// src/lib/tickets.ts (separate Workers bundle — flip both together). While
-// true, any cart line for a PICKUP_ELIGIBLE product (every one of them carries
-// a ticket) is refused. Enforced here, not just in the UI, so stale carts,
-// direct API calls, and a refund restocking a ticket back above zero in Sanity
-// can't reopen online sales. Door tickets are sold on the booth Stripe Reader.
-const EARLY_BIRD_SOLD_OUT = true;
+// Every ticket product (any show) is collected at the show, never shipped, so
+// a cart of only these skips shipping. Declared once in the show registry —
+// src/lib/shows.ts, ADR 0009.
+const PICKUP_ELIGIBLE_PRODUCT_IDS = new Set(Object.keys(TICKET_PRODUCTS));
 
 // Required tee/size selections for the bundle products. MIRRORS
 // src/lib/bundleOptions.ts (this runs in a separate Workers bundle and can't
@@ -147,14 +135,27 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
   // cart fails fast here instead of after two Sanity round-trips.
   if (items.length > 50) return json({ error: 'That cart is too large — please split the order.' }, 400);
 
-  if (EARLY_BIRD_SOLD_OUT && items.some((i) => PICKUP_ELIGIBLE_PRODUCT_IDS.has(i.productId))) {
-    return json(
-      {
-        error:
-          'Early bird tickets are sold out — tickets are now available at the door only. Remove the ticket from your cart to check out with the rest of your order.',
-      },
-      409,
-    );
+  // Per-show online sales gate (ADR 0009). Enforced here, not just in the UI,
+  // so stale carts, direct API calls, and a refund restocking a ticket back
+  // above zero can't reopen sales for a show that's door-only.
+  const ticketShows = new Set<string>();
+  for (const it of items) {
+    const t = ticketProduct(it.productId);
+    if (!t) continue;
+    const show = SHOWS[t.show];
+    if (!show?.onlineSales) {
+      return json(
+        {
+          error: `Online tickets for ${show?.dateText ?? 'that show'} are closed — tickets are available at the door only. Remove the ticket from your cart to check out with the rest of your order.`,
+        },
+        409,
+      );
+    }
+    ticketShows.add(t.show);
+  }
+  // One order = one QR = one show. A mixed-show cart would admit to only one.
+  if (ticketShows.size > 1) {
+    return json({ error: 'Tickets for different shows need separate orders — please check out one show at a time.' }, 409);
   }
 
   const ids = [...new Set(items.map((i) => i.productId).filter(Boolean))];

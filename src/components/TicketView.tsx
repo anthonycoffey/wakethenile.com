@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { qrSvg } from '../lib/qr';
+import { SHOWS, checkinOpen, doorShowAt, showEnded } from '../lib/shows';
 
 type Tier = 'ga' | 'vip' | 'ga-plus';
 interface TierBreakdown {
@@ -16,6 +17,8 @@ interface Ticket {
   // Only set when the order mixes tiers (e.g. one VIP + one GA) — a flattened
   // "VIP" badge + "Admits 2" would otherwise read as two VIP admissions.
   breakdown: TierBreakdown[] | null;
+  /** The night this pass admits to. */
+  show: { id: string; label: string; dateText: string; venue: string } | null;
 }
 const tierText = (t: Tier) => (t === 'vip' ? 'VIP' : t === 'ga-plus' ? 'GA+' : 'GA');
 type Status = 'loading' | 'ready' | 'notfound' | 'error' | 'void';
@@ -74,6 +77,7 @@ export default function TicketView() {
           admitted: Math.max(0, data.admitted ?? 0),
           checkedInAt: data.checkedInAt ?? null,
           breakdown: Array.isArray(data.breakdown) && data.breakdown.length > 1 ? data.breakdown : null,
+          show: data.show ?? null,
         });
         setStatus('ready');
       } catch {
@@ -226,6 +230,13 @@ export default function TicketView() {
   const isGaPlus = ticket.tier === 'ga-plus';
   const checkedIn = !!ticket.checkedInAt;
   const isMixed = !!ticket.breakdown;
+  // Heads-up for door staff before they even press the button. The server
+  // makes the real call (/api/checkin refuses it regardless); this just stops
+  // a queue forming behind a ticket that was never going to work tonight.
+  const doorShow = doorShowAt();
+  const doorOpen = !ticket.show || checkinOpen(ticket.show.id);
+  const wrongShow = !!staffPin && !doorOpen;
+  const showOver = !!ticket.show && !!SHOWS[ticket.show.id] && showEnded(SHOWS[ticket.show.id]);
 
   return (
     <div className={`ticket ${isVip ? 'ticket--vip' : isGaPlus ? 'ticket--ga-plus' : ''}`}>
@@ -234,8 +245,18 @@ export default function TicketView() {
           ? 'Mixed order — see admits'
           : isVip ? 'VIP · Ultimate Fan' : isGaPlus ? 'GA+ · Free Drinks All Night' : 'General Admission'}
       </span>
-      <h1 className="ticket__title">Wake the Nile — Sep 19</h1>
-      <p className="ticket__venue">Dwell Coworking Manchaca Auditorium</p>
+      <h1 className="ticket__title">Wake the Nile — {ticket.show?.dateText ?? 'Live'}</h1>
+      {ticket.show && <p className="ticket__venue">{ticket.show.venue}</p>}
+      {wrongShow && (
+        <p
+          className="ticket__status"
+          style={{ background: '#7f1d1d', color: '#fff', padding: '10px 14px', borderRadius: 8 }}
+        >
+          {showOver
+            ? `⛔ CHECK-IN CLOSED — this ticket was for ${ticket.show!.label}, which has ended. Do not admit.`
+            : `⛔ WRONG SHOW — this ticket is for ${ticket.show!.label}, not ${doorShow.label}. Do not admit.`}
+        </p>
+      )}
       {ticket.name && <p className="ticket__name">{ticket.name}</p>}
       <p className="ticket__admits">
         Admits {ticket.admits}
@@ -269,7 +290,11 @@ export default function TicketView() {
 
       {/* Staff-only controls: visible once this device has unlocked the door PIN. */}
       <div className="ticket__staff">
-        {staffPin ? (
+        {staffPin && !doorOpen ? (
+          // Past or other-night ticket: no check-in or undo controls at all.
+          // The server refuses both regardless (/api/checkin).
+          <p className="ticket__checkinmsg">Check-in for this ticket is closed.</p>
+        ) : staffPin ? (
           <>
             {/* A party doesn't always arrive together, so staff say how many
                 are standing in front of them rather than burning the whole

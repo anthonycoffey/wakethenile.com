@@ -17,7 +17,19 @@ interface Attendee {
   // `tier`/`admits` above already fully describe the order.
   breakdown: TierBreakdown[] | null;
 }
-type Status = 'locked' | 'loading' | 'ready' | 'error';
+type ShowStatus = 'open' | 'upcoming' | 'past';
+interface ShowSummary {
+  id: string;
+  label: string;
+  dateText: string;
+  venue: string;
+  /** 'open' = the door is checking this show in; 'past' = frozen, view only. */
+  status: ShowStatus;
+  tickets?: number | null;
+  admits?: number | null;
+  inRoom?: number | null;
+}
+type Status = 'locked' | 'picking' | 'loading' | 'ready' | 'error';
 
 const PIN_KEY = 'wtn_staff_pin';
 const fmtTime = (iso: string) =>
@@ -28,29 +40,68 @@ const tierLabel = (r: Attendee): string =>
   r.breakdown && r.breakdown.length > 1
     ? r.breakdown.map((b) => `${b.admits}× ${b.tier.toUpperCase()}`).join(' + ')
     : (r.tier ?? 'ga').toUpperCase();
+const STATUS_TEXT: Record<ShowStatus, string> = {
+  open: 'Check-in open',
+  upcoming: 'Upcoming',
+  past: 'Past · check-in closed',
+};
 
+/**
+ * Staff attendee lists, one show at a time (ADR 0009). After the door PIN,
+ * staff pick a show: the one the door is admitting is marked "Check-in open";
+ * past shows open read-only — the server refuses check-in for them anyway.
+ */
 export default function AttendeeList() {
   const [status, setStatus] = useState<Status>('locked');
   const [pinInput, setPinInput] = useState('');
+  const [pinVisible, setPinVisible] = useState(false);
   const [rows, setRows] = useState<Attendee[]>([]);
   const [q, setQ] = useState('');
   const [err, setErr] = useState<string | null>(null);
+  const [show, setShow] = useState<ShowSummary | null>(null);
+  const [shows, setShows] = useState<ShowSummary[]>([]);
 
-  async function load(pin: string) {
+  /** Fetch with the door PIN; a 401 drops back to the lock screen. */
+  async function staffFetch<T>(pin: string, qs: string): Promise<T | null> {
+    const res = await fetch(`/api/attendees?${qs}`, { headers: { 'x-staff-pin': pin } });
+    if (res.status === 401) {
+      localStorage.removeItem(PIN_KEY);
+      setStatus('locked');
+      setErr('Wrong door PIN.');
+      return null;
+    }
+    const data = (await res.json()) as T & { error?: string };
+    if (!res.ok) throw new Error(data.error || 'load failed');
+    localStorage.setItem(PIN_KEY, pin);
+    return data;
+  }
+
+  async function loadShows(pin: string) {
     setStatus('loading');
     setErr(null);
     try {
-      const res = await fetch('/api/attendees', { headers: { 'x-staff-pin': pin } });
-      if (res.status === 401) {
-        localStorage.removeItem(PIN_KEY);
-        setStatus('locked');
-        setErr('Wrong door PIN.');
-        return;
-      }
-      const data = (await res.json()) as { attendees?: Attendee[]; error?: string };
-      if (!res.ok) throw new Error(data.error || 'load failed');
-      localStorage.setItem(PIN_KEY, pin);
+      const data = await staffFetch<{ shows?: ShowSummary[] }>(pin, 'shows=1');
+      if (!data) return;
+      setShows(data.shows ?? []);
+      setStatus('picking');
+    } catch {
+      setStatus('error');
+    }
+  }
+
+  async function openShow(id: string) {
+    const pin = localStorage.getItem(PIN_KEY);
+    if (!pin) return setStatus('locked');
+    setStatus('loading');
+    setQ('');
+    try {
+      const data = await staffFetch<{ attendees?: Attendee[]; show?: ShowSummary }>(
+        pin,
+        `show=${encodeURIComponent(id)}`,
+      );
+      if (!data) return;
       setRows(data.attendees ?? []);
+      setShow(data.show ?? null);
       setStatus('ready');
     } catch {
       setStatus('error');
@@ -59,7 +110,7 @@ export default function AttendeeList() {
 
   useEffect(() => {
     const saved = localStorage.getItem(PIN_KEY);
-    if (saved) load(saved);
+    if (saved) loadShows(saved);
   }, []);
 
   const filtered = useMemo(() => {
@@ -95,46 +146,101 @@ export default function AttendeeList() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `wtn-attendees-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `wtn-attendees-${show?.id ?? new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
 
-  if (status === 'locked' || (status === 'error' && rows.length === 0)) {
+  if (status === 'locked' || (status === 'error' && shows.length === 0)) {
     return (
       <form
         className="att__lock"
         onSubmit={(e) => {
           e.preventDefault();
-          if (pinInput) load(pinInput);
+          if (pinInput.trim()) loadShows(pinInput.trim());
         }}
       >
         <h1 className="att__title">Attendees</h1>
         <p className="att__sub">Staff only — enter the door PIN.</p>
         <input
-          type="password"
+          type={pinVisible ? 'text' : 'password'}
           className="att__pin"
           placeholder="Door PIN"
           value={pinInput}
           onChange={(e) => setPinInput(e.target.value)}
+          autoCapitalize="off"
+          autoCorrect="off"
+          autoComplete="off"
+          spellCheck={false}
           autoFocus
         />
+        <label className="att__showpin">
+          <input type="checkbox" checked={pinVisible} onChange={(e) => setPinVisible(e.target.checked)} /> Show PIN
+        </label>
         <button type="submit" className="att__btn">Unlock</button>
         {err && <p className="att__err">{err}</p>}
+        {status === 'error' && !err && <p className="att__err">Couldn’t load — check the connection and try again.</p>}
       </form>
     );
   }
 
-  if (status === 'loading') return <p className="att__sub">Loading attendees…</p>;
+  if (status === 'loading') return <p className="att__sub">Loading…</p>;
+
+  if (status === 'picking' || (status === 'error' && !show)) {
+    return (
+      <div className="att">
+        <h1 className="att__title">Attendees</h1>
+        <p className="att__sub att__sub--left">Choose a show.</p>
+        <ul className="att__shows">
+          {shows.map((s) => (
+            <li key={s.id}>
+              <button
+                type="button"
+                className={`att__show att__show--${s.status}`}
+                onClick={() => openShow(s.id)}
+              >
+                <span className="att__showname">{s.label}</span>
+                <span className="att__showmeta">{s.dateText} · {s.venue}</span>
+                <span className="att__showfoot">
+                  <span className={`att__badge att__badge--${s.status}`}>{STATUS_TEXT[s.status]}</span>
+                  {typeof s.admits === 'number' && (
+                    <span className="att__showcount">
+                      {s.admits} admits{typeof s.inRoom === 'number' && s.inRoom > 0 ? ` · ${s.inRoom} checked in` : ''}
+                    </span>
+                  )}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+        {status === 'error' && <p className="att__err">Couldn’t open that show — try again.</p>}
+      </div>
+    );
+  }
+
+  const readOnly = show?.status !== 'open';
 
   return (
     <div className="att">
+      <button type="button" className="att__back" onClick={() => setStatus('picking')}>
+        ← All shows
+      </button>
       <div className="att__head">
-        <h1 className="att__title">Attendees</h1>
+        <h1 className="att__title">{show?.label ?? 'Attendees'}</h1>
         <button type="button" className="att__csv" onClick={downloadCsv}>Download CSV</button>
       </div>
+      {show && (
+        <p className={`att__banner att__banner--${show.status}`}>
+          {show.status === 'open'
+            ? '✓ Check-in open — scan tickets for this show.'
+            : show.status === 'past'
+              ? 'This show has ended. Check-in is closed — this list is view only.'
+              : 'Not tonight’s show — check-in opens on show night. View only.'}
+        </p>
+      )}
       <p className="att__stats">
-        {totals.orders} orders · {totals.admits} admits · <strong>{totals.inCount}</strong> in the room
+        {totals.orders} orders · {totals.admits} admits · <strong>{totals.inCount}</strong>{' '}
+        {readOnly ? 'checked in' : 'in the room'}
         {totals.walkUps > 0 && <> · {totals.walkUps} at the door</>}
       </p>
       <input
@@ -182,7 +288,9 @@ export default function AttendeeList() {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={5} className="att__empty">No matching attendees.</td>
+                <td colSpan={5} className="att__empty">
+                  {rows.length === 0 ? 'No tickets sold for this show yet.' : 'No matching attendees.'}
+                </td>
               </tr>
             )}
           </tbody>

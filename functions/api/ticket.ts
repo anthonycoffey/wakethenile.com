@@ -6,6 +6,8 @@
  * status). The unguessable `ticketCode` is the bearer credential; the
  * state-changing check-in lives in /api/checkin (PIN-gated). Edge-native.
  */
+import { LEGACY_SHOW_ID, showInfo } from '../../src/lib/shows';
+
 interface Env {
   SANITY_PROJECT_ID?: string;
   SANITY_DATASET?: string;
@@ -47,15 +49,16 @@ export const onRequestGet = async (context: { request: Request; env: Env }): Pro
     refundedAt?: string | null;
     fulfillmentStatus?: string | null;
     breakdown?: { tier: string; admits: number }[] | null;
+    show?: string | null;
   } | null;
   try {
     order = await sanityQuery(
       env,
       `*[_type == "order" && !(_id in path("drafts.**")) && ticketCode == $code][0]{
         customerName, ticketTier, admits, admitted, checkedInAt, refundedAt, fulfillmentStatus,
-        "breakdown": ticketBreakdown[]{tier, admits}
+        "breakdown": ticketBreakdown[]{tier, admits}, "show": coalesce(show, $legacy)
       }`,
-      { code },
+      { code, legacy: LEGACY_SHOW_ID },
     );
   } catch {
     return json({ error: 'Lookup failed.' }, 502);
@@ -68,8 +71,12 @@ export const onRequestGet = async (context: { request: Request; env: Env }): Pro
   }
 
   const tier = order.ticketTier === 'vip' || order.ticketTier === 'ga-plus' ? order.ticketTier : 'ga';
+  const show = showInfo(order.show);
   return json({
     name: order.customerName ?? null,
+    // Which night this pass is for — printed on the ticket so a buyer (and
+    // the door) can see at a glance it isn't for some other show.
+    show: show ? { id: show.id, label: show.label, dateText: show.dateText, venue: show.venue } : null,
     tier,
     admits: Math.max(1, order.admits ?? 1),
     admitted: Math.max(0, order.admitted ?? (order.checkedInAt ? 1 : 0)),

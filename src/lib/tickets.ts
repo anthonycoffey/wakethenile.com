@@ -1,25 +1,21 @@
 /**
- * Early bird ticket kill switch.
- *
- * While `true`, online ticket sales are closed: /albumrelease and /shows show
- * the "sold out — tickets at the door" banner, the ticket tiers render as Sold
- * Out, ticket products drop out of the /merch grid (their product pages
- * redirect to /shows), and /api/checkout refuses any ticket line.
- * Door tickets are sold at the merch booth on the Stripe Reader, not here.
- *
- * `functions/api/checkout.ts` keeps its own mirrored flag (a separate Workers
- * bundle can't import this module) — flip both together. See
- * docs/specs/active/early-bird-sold-out.md.
+ * Ticket helpers for the Astro site. The data itself lives in the show
+ * registry (src/lib/shows.ts, ADR 0009) — this file only derives from it.
  */
-export const EARLY_BIRD_SOLD_OUT = true;
+import { LEGACY_SHOW_ID, SHOWS, TICKET_PRODUCT_IDS } from './shows';
+
+export { TICKET_PRODUCT_IDS };
 
 /**
- * Every product that carries a ticket. Mirrors PICKUP_ELIGIBLE_PRODUCT_IDS in
- * functions/api/checkout.ts (see albumrelease-ga-tiers.md's sync checklist).
+ * Sep 19 online sales closed (door only). Kept for the dormant /albumrelease
+ * page; new code should check `SHOWS[id].onlineSales` instead.
  */
-export const TICKET_PRODUCT_IDS: ReadonlySet<string> = new Set([
-  '2480f00d-9317-4ed0-9406-bcef1e34bc71', // Live Show [Early Bird] Ticket
-  'b351d11f-4c78-4a1f-b36b-c10d951c96ea', // VIP Fan Experience (ticket + bundle)
-  'albumrelease-ga', // GA
-  'albumrelease-ga-plus', // GA+
-]);
+export const EARLY_BIRD_SOLD_OUT = !SHOWS[LEGACY_SHOW_ID].onlineSales;
+
+/**
+ * Merch retired from the store (not in the grid; old product links go back to
+ * /merch). The Sanity docs stay so past orders still resolve.
+ * - product-tour-poster: Album Release Show Poster, Sep 19 show only.
+ */
+export const RETIRED_PRODUCT_IDS = new Set<string>(['product-tour-poster']);
+

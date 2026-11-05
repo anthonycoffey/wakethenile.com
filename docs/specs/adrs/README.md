@@ -17,6 +17,7 @@ that supersedes it.
 | [0006](./0006-live-show-ticket-presale-on-stripe-store.md) | Live-show ticket presale on the hand-rolled Stripe store | Accepted |
 | [0007](./0007-bundle-line-item-options.md) | Per-line "options" for bundle tee selection (not priced variants) | Accepted |
 | [0008](./0008-qr-ticketing-door-checkin.md) | QR ticketing + door check-in (random code, Sanity check-in state) | Accepted |
+| [0009](./0009-per-show-ticketing-shared-registry.md) | Per-show ticketing from one shared show registry | Accepted |
 
 ## Adding an ADR
 
