@@ -40,6 +40,10 @@ export interface ShowInfo {
   onlineSales: boolean;
   /** Price at the door, for "sold out online" copy. */
   doorPrice?: number;
+  /** Stripe payment description, e.g. "Dec 04 Maggie Mae's with Gators". */
+  paymentDescription?: string;
+  /** Show poster/flyer (site-relative), used for the Stripe line-item image. */
+  poster?: string;
 }
 
 export const SHOWS: Record<string, ShowInfo> = {
@@ -71,6 +75,8 @@ export const SHOWS: Record<string, ShowInfo> = {
     hubspotProperty: 'wtn_show_2026_12_04',
     onlineSales: true,
     doorPrice: 30,
+    paymentDescription: "Dec 04 Maggie Mae's with Gators",
+    poster: '/images/shows/2026-12-04-poster-900.jpg',
   },
 };
 
