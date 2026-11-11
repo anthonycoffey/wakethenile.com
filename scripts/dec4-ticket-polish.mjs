@@ -8,8 +8,8 @@
  *  2. Stripe: poster image on the "Dec 4 — Door GA" product (booth reader).
  *  3. Stripe: customer-facing promotion code GROVEMANIA2026 on the existing
  *     100%-off "GROVEMANIA26" coupon (a coupon alone can't be typed in).
- *  4. Backfill every Dec 4 order already sold: payment description
- *     "Dec 04 Maggie Mae's with Gators" and the poster on its Stripe products.
+ *  4. Backfill every Dec 4 order already sold with the payment description
+ *     "Dec 04 Maggie Mae's with Gators" (past line-item images can't be edited).
  *
  * Run:  node --env-file=.env scripts/dec4-ticket-polish.mjs [--dry-run]
  */
@@ -122,7 +122,6 @@ const orders = await sanity.fetch(
   { show: SHOW_ID },
 );
 console.log(`\n${orders.length} Dec 4 order(s) with a payment to backfill`);
-const touchedProducts = new Set();
 for (const o of orders) {
   let pi;
   try {
@@ -140,20 +139,8 @@ for (const o of orders) {
     await write(`describe ${pi.id} (${o.customerName ?? 'no name'}, was "${pi.description ?? '—'}")`, () =>
       stripe('POST', `payment_intents/${pi.id}`, { description: DESCRIPTION }),
     );
-  if (!stripeImage) continue;
-  const sessions = await stripe(
-    'GET',
-    `checkout/sessions?payment_intent=${pi.id}&limit=1&expand[]=data.line_items.data.price.product`,
-  );
-  for (const li of sessions.data[0]?.line_items?.data ?? []) {
-    const prod = li.price?.product;
-    const productId = prod?.metadata?.productId;
-    if (!prod?.id || touchedProducts.has(prod.id) || !TICKET_IDS.includes(productId)) continue;
-    touchedProducts.add(prod.id);
-    if (prod.images?.length) continue;
-    await write(`set poster on Stripe product ${prod.id} (${prod.name})`, () =>
-      stripe('POST', `products/${prod.id}`, { 'images[0]': stripeImage }),
-    );
-  }
+  // No image backfill: past line items point at products Stripe created
+  // automatically at checkout, and Stripe only lets us edit their metadata.
+  // New checkouts get the poster from the Sanity product image.
 }
 console.log('\nDone.');

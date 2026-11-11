@@ -38,7 +38,7 @@ ticket panel on its `/shows` row instead of an external "Get Tickets" link:
 - "Get Tickets" expands the panel under the row: billing line, doors/age, the live price, quantity
   stepper, "Add to cart".
 - The panel calls `GET /api/ticket-stock?show=2026-12-04` on open. While early bird stock > 0 it sells
-  `dec4-ga-early` at $20 and shows "Early bird — N left"; after that it sells `dec4-ga` at $30. When
+  `dec4-ga-early` at $20 (no tickets-left counter, removed 2026-11-10); after that it sells `dec4-ga` at $30. When
   both are 0 it shows "Sold out online — tickets at the door ($30)". If the call fails it falls back to
   the stock baked in at build time; checkout re-validates either way.
 - "Add to cart" goes **straight to `/checkout`**: no `/merch` detour, upsell banner or merch promo
