@@ -287,7 +287,11 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
         name: `${baseName}${optionSuffix}`,
         metadata,
       };
-      if (p.imageUrl) product_data.images = [p.imageUrl];
+      // Ticket lines show the show's poster in Stripe (checkout + dashboard);
+      // a Sanity product image, if set, wins.
+      const poster = ticketProduct(p._id) ? SHOWS[ticketProduct(p._id)!.show]?.poster : undefined;
+      const image = p.imageUrl || (poster ? new URL(poster, request.url).toString() : undefined);
+      if (image) product_data.images = [image];
       if (taxEnabled) product_data.tax_code = p.taxCode || defaultTaxCode;
       price_data.product_data = product_data;
     }
@@ -332,6 +336,13 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
     return_url: `${origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
     metadata: { source: 'wtn-web' },
   };
+  // Name the show on the payment so the Stripe dashboard's Description column
+  // reads "Dec 04 Maggie Mae's with Gators" instead of "—".
+  const [cartShowId] = [...ticketShows];
+  const cartShow = cartShowId ? SHOWS[cartShowId] : undefined;
+  if (cartShow?.paymentDescription) {
+    params.payment_intent_data = { description: cartShow.paymentDescription };
+  }
   if (!allPickup) {
     params.shipping_address_collection = { allowed_countries: countries };
     params.shipping_options = shipping_options;

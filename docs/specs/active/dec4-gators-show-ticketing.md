@@ -38,7 +38,7 @@ ticket panel on its `/shows` row instead of an external "Get Tickets" link:
 - "Get Tickets" expands the panel under the row: billing line, doors/age, the live price, quantity
   stepper, "Add to cart".
 - The panel calls `GET /api/ticket-stock?show=2026-12-04` on open. While early bird stock > 0 it sells
-  `dec4-ga-early` at $20 and shows "Early bird — N left"; after that it sells `dec4-ga` at $30. When
+  `dec4-ga-early` at $20 (no tickets-left counter, removed 2026-11-10); after that it sells `dec4-ga` at $30. When
   both are 0 it shows "Sold out online — tickets at the door ($30)". If the call fails it falls back to
   the stock baked in at build time; checkout re-validates either way.
 - "Add to cart" goes **straight to `/checkout`**: no `/merch` detour, upsell banner or merch promo
@@ -136,3 +136,18 @@ Stripe routes the event (in test mode it doesn't reach branch previews at all).
 - GA+ / VIP tiers (GA only this show).
 - Revenue split / tracked links for Gators (confirmed not needed: all sales are ours, venue takes no cut).
 - Refund policy copy (confirmed: not printed).
+
+## Ticket polish (2026-11-09)
+
+- **Stripe description.** Ticket checkouts set `payment_intent_data.description` from the registry's
+  `paymentDescription` ("Dec 04 Maggie Mae's with Gators"), so the payments list no longer reads "—".
+- **Poster as the item image.** The show poster (`public/images/shows/2026-12-04-poster*.jpg`) is the
+  image on both Sanity web ticket products, so Stripe's line item carries it. Checkout falls back to
+  the registry's `poster` if a ticket product ever has no image. The Stripe door product has it too.
+- **GROVEMANIA2026.** A 100%-off coupon ("GROVEMANIA26") existed but no promotion code, so the code
+  couldn't be typed at checkout. `scripts/dec4-ticket-polish.mjs` created the promotion code on that
+  coupon. $0 orders already fulfil (`no_payment_required` is treated as paid). The coupon has no
+  product restriction or redemption cap: it zeroes a whole cart, merch included.
+- **Backfill.** The same script describes the Dec 4 payments already taken and puts the poster on
+  their Stripe products. It needs the restricted key to have Payment Intents: Write and Checkout
+  Sessions: Read; it skips with a message otherwise.

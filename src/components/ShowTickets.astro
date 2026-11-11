@@ -27,7 +27,6 @@ const products = ids
   })
   .filter((p): p is NonNullable<typeof p> => !!p);
 // The last phase's price, so early-bird copy can say what comes next.
-const nextPrice = products.length > 1 ? products[products.length - 1].price : null;
 const details = [show.timesText, show.age].filter(Boolean).join(' · ');
 ---
 
@@ -44,7 +43,6 @@ const details = [show.timesText, show.age].filter(Boolean).join(' · ');
         <span class="tix__phase" data-phase></span>
         <span class="tix__amount" data-amount></span>
       </div>
-      <p class="tix__left" data-left></p>
       <div class="tix__qty">
         <button type="button" class="tix__step" data-step="-1" aria-label="One fewer ticket">−</button>
         <span class="tix__count" aria-live="polite"><strong data-qty>1</strong> ticket<span data-plural hidden>s</span></span>
@@ -67,7 +65,7 @@ const details = [show.timesText, show.age].filter(Boolean).join(' · ');
   is:inline
   type="application/json"
   data-tix-fallback={show.id}
-  set:html={JSON.stringify({ products, nextPrice }).replace(/</g, '\\u003c')}
+  set:html={JSON.stringify({ products }).replace(/</g, '\\u003c')}
 />
 
 <script>
@@ -79,7 +77,7 @@ const details = [show.timesText, show.age].filter(Boolean).join(' · ');
   for (const panel of document.querySelectorAll<HTMLElement>('.tix[data-show]')) {
     const showId = panel.dataset.show!;
     const fallbackEl = document.querySelector<HTMLScriptElement>(`[data-tix-fallback="${showId}"]`);
-    const fallback = JSON.parse(fallbackEl?.textContent || '{}') as { products?: Product[]; nextPrice?: number | null };
+    const fallback = JSON.parse(fallbackEl?.textContent || '{}') as { products?: Product[] };
     const buy = panel.querySelector<HTMLElement>('.tix__buy')!;
     const $ = <T extends HTMLElement>(sel: string) => panel.querySelector<T>(sel)!;
     let current: Product | null = null;
@@ -91,17 +89,12 @@ const details = [show.timesText, show.age].filter(Boolean).join(' · ');
       current = products.find((p) => p.stock > 0) ?? null;
       buy.dataset.state = current ? 'open' : 'soldout';
       $('[data-soldout]').hidden = !!current;
-      for (const sel of ['.tix__price', '[data-left]', '.tix__qty', '[data-add]']) $(sel).hidden = !current;
+      for (const sel of ['.tix__price', '.tix__qty', '[data-add]']) $(sel).hidden = !current;
       if (!current) return;
-      const isEarly = products.length > 1 && current.id === products[0].id;
       $('[data-phase]').textContent = current.phaseLabel ?? '';
       $('[data-amount]').textContent = `$${current.price}`;
-      $('[data-left]').textContent =
-        isEarly && fallback.nextPrice
-          ? `${current.stock} early bird ticket${current.stock === 1 ? '' : 's'} left — then $${fallback.nextPrice}`
-          : current.stock <= 20
-            ? `Only ${current.stock} left online`
-            : '';
+      // No "N left" counter on the panel (owner's call, 2026-11-10). Stock
+      // still picks the price phase and caps the quantity stepper.
       qty = Math.min(qty, maxQty());
       paintQty();
     };
@@ -233,15 +226,6 @@ const details = [show.timesText, show.age].filter(Boolean).join(' · ');
     font-size: 2.4rem;
     font-weight: 800;
     line-height: 1;
-  }
-  .tix__left {
-    color: var(--accent);
-    margin: 0;
-    font-size: 0.9rem;
-    opacity: 0.9;
-  }
-  .tix__left:empty {
-    display: none;
   }
   .tix__qty {
     display: flex;
