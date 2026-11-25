@@ -378,7 +378,7 @@ const details = [show.timesText, show.age].filter(Boolean).join(' · ');
     display: flex;
     gap: 0.6rem;
   }
-  .tix__choice {
+  .tix__choices :global(.tix__choice) {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -391,15 +391,15 @@ const details = [show.timesText, show.age].filter(Boolean).join(' · ');
     font-family: inherit;
     cursor: pointer;
   }
-  .tix__choice span {
+  .tix__choices :global(.tix__choice span) {
     font-size: 0.9rem;
     opacity: 0.85;
   }
-  .tix__choice[aria-checked='true'] {
+  .tix__choices :global(.tix__choice[aria-checked='true']) {
     background: var(--accent);
     color: var(--accent-ink);
   }
-  .tix__choice:disabled {
+  .tix__choices :global(.tix__choice:disabled) {
     opacity: 0.35;
     cursor: not-allowed;
   }
