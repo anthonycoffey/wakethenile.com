@@ -143,7 +143,10 @@ const details = [show.timesText, show.age].filter(Boolean).join(' · ');
       const { promo, price, stock } = deal;
       const allowed = promo.quantities.filter((q) => q <= stock);
       $('[data-deal-badge]').textContent = promo.label;
-      $('[data-deal-head]').textContent = promo.quantities.map((q) => `${q} for $${q * price}`).join(' · ');
+      // Each offer stays on one line; the pair wraps between them on phones.
+      $('[data-deal-head]').innerHTML = promo.quantities
+        .map((q) => `<span style="white-space:nowrap">${Number(q)} for $${Number(q * price)}</span>`)
+        .join(' · ');
       $('[data-deal-soldout]').hidden = allowed.length > 0;
       $('[data-deal-add]').hidden = allowed.length === 0;
       if (!allowed.includes(dealQty)) dealQty = allowed[0] ?? 0;
