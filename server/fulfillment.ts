@@ -17,8 +17,10 @@
  */
 import {
   DOOR_TICKET_SKUS,
+  HUBSPOT_PROMO_PROPERTY,
   LEGACY_SHOW_ID,
   TIER_PRIORITY,
+  promoForProduct,
   showInfo,
   ticketProduct,
   type TicketTier,
@@ -188,6 +190,8 @@ async function hubspotSetAttendeeTier(
   name: string | null,
   tier: TicketTier | '',
   showId: string | null | undefined,
+  /** Ticket deal value for HUBSPOT_PROMO_PROPERTY (e.g. "BF2026"), if any. */
+  promoValue?: string,
 ): Promise<void> {
   if (!env.HUBSPOT_TOKEN || !email) return;
   const [firstname, ...rest] = (name ?? '').trim().split(/\s+/);
@@ -210,6 +214,7 @@ async function hubspotSetAttendeeTier(
               ...(firstname ? { firstname } : {}),
               ...(lastname ? { lastname } : {}),
               ...(withShow && property ? { [property]: tier ? tier.toUpperCase() : '' } : {}),
+              ...(withShow && promoValue ? { [HUBSPOT_PROMO_PROPERTY]: promoValue } : {}),
             },
           },
         ],
@@ -219,8 +224,8 @@ async function hubspotSetAttendeeTier(
     let res = await upsert(true);
     // A show property nobody has created in HubSpot yet rejects the WHOLE
     // upsert. Land the contact anyway; the flag can be backfilled later.
-    if (res.status === 400 && property) {
-      console.error(`[webhook] HubSpot rejected property ${property} — retrying without it:`, await res.text());
+    if (res.status === 400 && (property || promoValue)) {
+      console.error(`[webhook] HubSpot rejected a custom property — retrying without them:`, await res.text());
       res = await upsert(false);
     }
     if (!res.ok) {
@@ -402,6 +407,12 @@ async function warnIfOversold(
   ).catch((e) => console.error('[webhook] oversold alert email failed:', e));
 }
 
+/** HubSpot value for the ticket deal(s) on an order, e.g. "BF2026". */
+const promoValueOf = (lines: OrderLine[]): string | undefined => {
+  const v = [...new Set(lines.map((li) => promoForProduct(li.productId)?.hubspotValue).filter(Boolean))];
+  return v.length ? v.join(';') : undefined;
+};
+
 /**
  * Headline tier + admit count for a set of lines.
  *
@@ -530,7 +541,7 @@ async function repairMissingTicket(env: Env, orderId: string, origin: string): P
     return;
   }
   console.error(`[fulfillment] repaired order ${orderId}: added missing ${show} ticket`);
-  if (ticketTier) await hubspotSetAttendeeTier(env, order.email, order.customerName, ticketTier, show);
+  if (ticketTier) await hubspotSetAttendeeTier(env, order.email, order.customerName, ticketTier, show, promoValueOf(lines));
   if (!order.email) return;
   const settings = await sanityQuery<any>(env, SETTINGS_QUERY, {}).catch(() => null);
   const itemsHtml = lines
@@ -711,7 +722,7 @@ export async function fulfillCheckoutSession(
 
   // Push ticket buyers into HubSpot (best effort; never blocks the 200).
   if (isTicketOrder && ticketTier) {
-    await hubspotSetAttendeeTier(env, orderDoc.email, orderDoc.customerName, ticketTier, show);
+    await hubspotSetAttendeeTier(env, orderDoc.email, orderDoc.customerName, ticketTier, show, promoValueOf(lineItems));
   }
 
   // Confirmation + admin alert (best effort; never blocks the 200).
