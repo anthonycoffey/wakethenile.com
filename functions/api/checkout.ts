@@ -8,7 +8,7 @@
  * Prices/stock are ALWAYS re-read from Sanity here; the client cart only supplies
  * productId + sku + qty, never trusted amounts.
  */
-import { SHOWS, TICKET_PRODUCTS, ticketProduct } from '../../src/lib/shows';
+import { SHOWS, TICKET_PRODUCTS, promoForProduct, promoOpen, ticketProduct, type TicketPromo } from '../../src/lib/shows';
 
 
 // Pinned to the Stripe SDK's API version so the value `embedded_page` and the
@@ -157,6 +157,38 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
   if (ticketShows.size > 1) {
     return json({ error: 'Tickets for different shows need separate orders — please check out one show at a time.' }, 409);
   }
+
+  // Time-boxed ticket deals (docs/specs/active/black-friday-ticket-promo.md).
+  // The window and the allowed quantities are enforced HERE: a cart left in
+  // localStorage, an edited request, or a visitor's wrong clock can't buy the
+  // deal outside its window or at an odd quantity.
+  const now = Date.now();
+  const dealQty = new Map<string, { promo: TicketPromo; qty: number }>();
+  for (const it of items) {
+    const promo = promoForProduct(it.productId);
+    if (!promo) continue;
+    if (!promoOpen(promo, now)) {
+      return json(
+        {
+          error: `The ${promo.label} ticket deal has ended — remove it from your cart and pick up regular tickets instead.`,
+        },
+        409,
+      );
+    }
+    const cur = dealQty.get(promo.id)?.qty ?? 0;
+    dealQty.set(promo.id, { promo, qty: cur + Math.max(1, Math.floor(Number(it.qty) || 1)) });
+  }
+  for (const { promo, qty } of dealQty.values()) {
+    if (!promo.quantities.includes(qty)) {
+      return json(
+        {
+          error: `The ${promo.label} deal comes in ${promo.quantities.join(' or ')} tickets — please adjust the quantity in your cart.`,
+        },
+        409,
+      );
+    }
+  }
+  const cartPromos = [...dealQty.values()].map((d) => d.promo);
 
   const ids = [...new Set(items.map((i) => i.productId).filter(Boolean))];
   let products: any[];
@@ -341,7 +373,18 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
   const [cartShowId] = [...ticketShows];
   const cartShow = cartShowId ? SHOWS[cartShowId] : undefined;
   if (cartShow?.paymentDescription) {
-    params.payment_intent_data = { description: cartShow.paymentDescription };
+    const suffix = cartPromos.map((p) => p.paymentSuffix).filter(Boolean).join(', ');
+    params.payment_intent_data = {
+      description: suffix ? `${cartShow.paymentDescription} — ${suffix}` : cartShow.paymentDescription,
+    };
+  }
+  if (cartPromos.length) {
+    (params.metadata as Record<string, string>).promo = cartPromos.map((p) => p.id).join(',');
+    // A deal session can't outlive the deal: one opened Sunday 11:50 PM
+    // mustn't be payable Monday afternoon. Stripe allows 30 min – 24 h.
+    const endsAt = Math.min(...cartPromos.map((p) => Date.parse(p.endsAt)));
+    const secs = Math.floor((endsAt - now) / 1000);
+    params.expires_at = Math.floor(now / 1000) + Math.min(24 * 3600, Math.max(30 * 60 + 60, secs));
   }
   if (!allPickup) {
     params.shipping_address_collection = { allowed_countries: countries };

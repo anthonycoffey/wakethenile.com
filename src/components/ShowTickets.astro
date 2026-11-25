@@ -7,7 +7,7 @@
 // opens and falls back to the stock baked in here if that call fails.
 // Checkout re-validates price + stock either way.
 import { sanityFetch } from '../lib/sanity';
-import { productsForShow, TICKET_PRODUCTS, type ShowInfo } from '../lib/shows';
+import { PROMOS, productsForShow, promoProductsForShow, TICKET_PRODUCTS, type ShowInfo } from '../lib/shows';
 
 interface Props {
   show: ShowInfo;
@@ -15,9 +15,13 @@ interface Props {
 const { show } = Astro.props;
 
 const ids = productsForShow(show.id);
+// Deal products (ADR 0009 registry `promo`) render beside the phase price
+// while their window is open. The window is decided in the browser against
+// server time, since this page is built ahead of time.
+const promoIds = promoProductsForShow(show.id);
 const rows = await sanityFetch<{ id: string; title: string; price: number; stock: number }[]>(
   `*[_type == "product" && _id in $ids]{ "id": _id, title, price, "stock": coalesce(stock, 0) }`,
-  { ids },
+  { ids: [...ids, ...promoIds] },
   [],
 );
 const products = ids
@@ -26,7 +30,12 @@ const products = ids
     return r ? { ...r, stock: Math.max(0, r.stock), phaseLabel: TICKET_PRODUCTS[id].phaseLabel ?? null } : null;
   })
   .filter((p): p is NonNullable<typeof p> => !!p);
-// The last phase's price, so early-bird copy can say what comes next.
+const promos = promoIds
+  .map((id) => {
+    const r = rows.find((x) => x.id === id);
+    return r ? { ...r, stock: Math.max(0, r.stock), phaseLabel: null, promo: PROMOS[TICKET_PRODUCTS[id].promo!] } : null;
+  })
+  .filter((p): p is NonNullable<typeof p> => !!p);
 const details = [show.timesText, show.age].filter(Boolean).join(' · ');
 ---
 
@@ -38,6 +47,7 @@ const details = [show.timesText, show.age].filter(Boolean).join(' · ');
     <p class="tix__meta">{show.dateText} · {show.venue} · {show.city}</p>
     {details && <p class="tix__meta">{details}</p>}
 
+    <div class="tix__options">
     <div class="tix__buy" data-state="loading">
       <div class="tix__price">
         <span class="tix__phase" data-phase></span>
@@ -54,6 +64,26 @@ const details = [show.timesText, show.age].filter(Boolean).join(' · ');
       </p>
     </div>
 
+    <div class="tix__deal" data-deal hidden>
+      <span class="tix__badge" data-deal-badge></span>
+      <p class="tix__dealhead" data-deal-head></p>
+      <div class="tix__choices" role="radiogroup" aria-label="How many tickets" data-deal-choices></div>
+      <button type="button" class="tix__add tix__add--deal" data-deal-add>Grab the deal →</button>
+      <p class="tix__soldout" data-deal-soldout hidden>Black Friday deal sold out — early bird still available.</p>
+    </div>
+    </div>
+
+    <div class="tix__countdown" data-countdown hidden>
+      <p class="tix__cdlabel" data-cd-label></p>
+      <div class="tix__cd" role="timer" aria-live="off">
+        <span><strong data-cd="d">0</strong><small>days</small></span>
+        <span><strong data-cd="h">00</strong><small>hrs</small></span>
+        <span><strong data-cd="m">00</strong><small>min</small></span>
+        <span><strong data-cd="s">00</strong><small>sec</small></span>
+      </div>
+    </div>
+    <p class="tix__extended" data-extended hidden></p>
+
     <p class="tix__fine">
       Your ticket is a QR code emailed to you right after checkout — nothing ships.
       {show.age && ` ${show.age}: bring your ID.`}
@@ -65,24 +95,118 @@ const details = [show.timesText, show.age].filter(Boolean).join(' · ');
   is:inline
   type="application/json"
   data-tix-fallback={show.id}
-  set:html={JSON.stringify({ products }).replace(/</g, '\\u003c')}
+  set:html={JSON.stringify({ products, promos }).replace(/</g, '\\u003c')}
 />
 
 <script>
-  import { addItem } from '../lib/cart';
+  import { addItem, removeItem } from '../lib/cart';
+  import type { TicketPromo } from '../lib/shows';
 
   interface Product { id: string; title: string; price: number; stock: number; phaseLabel: string | null }
+  interface Deal extends Product { promo: TicketPromo }
   const MAX_PER_ORDER = 8;
+  const pad = (n: number) => String(n).padStart(2, '0');
 
   for (const panel of document.querySelectorAll<HTMLElement>('.tix[data-show]')) {
     const showId = panel.dataset.show!;
     const fallbackEl = document.querySelector<HTMLScriptElement>(`[data-tix-fallback="${showId}"]`);
-    const fallback = JSON.parse(fallbackEl?.textContent || '{}') as { products?: Product[] };
+    const fallback = JSON.parse(fallbackEl?.textContent || '{}') as { products?: Product[]; promos?: Deal[] };
     const buy = panel.querySelector<HTMLElement>('.tix__buy')!;
     const $ = <T extends HTMLElement>(sel: string) => panel.querySelector<T>(sel)!;
     let current: Product | null = null;
     let qty = 1;
     let loaded = false;
+
+    // ---- Deal column (e.g. Black Friday 2 for $30 / 4 for $60) ----------
+    // Time is server time once /api/ticket-stock answers (skew = server −
+    // local), so a visitor's wrong clock can't fake or hide the deal.
+    // Checkout enforces the window and quantities regardless.
+    const dealEl = $('[data-deal]');
+    const countdownEl = $('[data-countdown]');
+    const extendedEl = $('[data-extended]');
+    let deal: Deal | null = null;
+    let dealQty = 0;
+    let skew = 0;
+    let timer: number | undefined;
+    const now = () => Date.now() + skew;
+
+    const renderDeal = (d: Deal | undefined) => {
+      deal = d ?? null;
+      const open = !!deal && now() >= Date.parse(deal.promo.startsAt) && now() < Date.parse(deal.promo.endsAt);
+      dealEl.hidden = !open;
+      panel.classList.toggle('has-deal', open);
+      if (!open || !deal) {
+        countdownEl.hidden = extendedEl.hidden = true;
+        window.clearInterval(timer);
+        return;
+      }
+      const { promo, price, stock } = deal;
+      const allowed = promo.quantities.filter((q) => q <= stock);
+      $('[data-deal-badge]').textContent = promo.label;
+      // Each offer stays on one line; the pair wraps between them on phones.
+      $('[data-deal-head]').innerHTML = promo.quantities
+        .map((q) => `<span style="white-space:nowrap">${Number(q)} for $${Number(q * price)}</span>`)
+        .join(' · ');
+      $('[data-deal-soldout]').hidden = allowed.length > 0;
+      $('[data-deal-add]').hidden = allowed.length === 0;
+      if (!allowed.includes(dealQty)) dealQty = allowed[0] ?? 0;
+      const choices = $('[data-deal-choices]');
+      choices.hidden = allowed.length === 0;
+      choices.replaceChildren(
+        ...promo.quantities.map((q) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'tix__choice';
+          b.setAttribute('role', 'radio');
+          b.setAttribute('aria-checked', String(q === dealQty));
+          b.disabled = !allowed.includes(q);
+          b.innerHTML = `<strong>${q} tickets</strong><span>$${q * price}</span>`;
+          b.addEventListener('click', () => {
+            dealQty = q;
+            renderDeal(deal ?? undefined);
+          });
+          return b;
+        }),
+      );
+      tick();
+      window.clearInterval(timer);
+      timer = window.setInterval(tick, 1000);
+    };
+
+    // Countdown to the headline deadline (end of Black Friday); after it the
+    // timer goes and "extended" copy shows until the deal itself closes.
+    const tick = () => {
+      if (!deal) return;
+      const t = now();
+      if (t >= Date.parse(deal.promo.endsAt)) return renderDeal(undefined);
+      const to = deal.promo.countdownTo ? Date.parse(deal.promo.countdownTo) : NaN;
+      const counting = t < to;
+      countdownEl.hidden = !counting;
+      extendedEl.hidden = counting || !deal.promo.extendedText;
+      extendedEl.textContent = deal.promo.extendedText ?? '';
+      if (!counting) return;
+      $('[data-cd-label]').textContent = deal.promo.countdownLabel ?? '';
+      let s = Math.floor((to - t) / 1000);
+      const d = Math.floor(s / 86400);
+      s -= d * 86400;
+      const h = Math.floor(s / 3600);
+      s -= h * 3600;
+      const m = Math.floor(s / 60);
+      s -= m * 60;
+      $('[data-cd="d"]').textContent = String(d);
+      $('[data-cd="h"]').textContent = pad(h);
+      $('[data-cd="m"]').textContent = pad(m);
+      $('[data-cd="s"]').textContent = pad(s);
+    };
+
+    $('[data-deal-add]').addEventListener('click', () => {
+      if (!deal || !dealQty) return;
+      // Picking again REPLACES the deal line: 2 + 4 would be 6, which
+      // checkout refuses (only the deal's own quantities are allowed).
+      removeItem(deal.id);
+      addItem({ productId: deal.id, slug: deal.id, title: deal.title, sku: deal.id, unitPrice: deal.price, qty: dealQty });
+      window.location.href = '/checkout';
+    });
 
     const render = (products: Product[]) => {
       // Sale order: the first phase with stock left is the one on sale.
@@ -110,13 +234,17 @@ const details = [show.timesText, show.age].filter(Boolean).join(' · ');
       if (loaded) return;
       loaded = true;
       render(fallback.products ?? []);
+      renderDeal(fallback.promos?.[0]);
       try {
         const res = await fetch(`/api/ticket-stock?show=${encodeURIComponent(showId)}`, {
           signal: AbortSignal.timeout(6000),
         });
         if (!res.ok) return;
-        const data = (await res.json()) as { products?: Product[] };
+        const data = (await res.json()) as { products?: Product[]; promos?: Deal[]; now?: number };
+        if (typeof data.now === 'number') skew = data.now - Date.now();
         if (Array.isArray(data.products) && data.products.length) render(data.products);
+        // The server only lists deals whose window is open right now.
+        if (Array.isArray(data.promos)) renderDeal(data.promos[0]);
       } catch {
         /* keep the build-time fallback */
       }
@@ -172,6 +300,9 @@ const details = [show.timesText, show.age].filter(Boolean).join(' · ');
   .tix[hidden] {
     display: none;
   }
+  .tix [hidden] {
+    display: none !important;
+  }
   .tix__inner {
     max-width: 34rem;
     margin: 0 auto;
@@ -198,8 +329,128 @@ const details = [show.timesText, show.age].filter(Boolean).join(' · ');
     margin: 0;
     font-size: 0.95rem;
   }
-  .tix__buy {
+  .tix.has-deal .tix__inner {
+    max-width: 48rem;
+  }
+  .tix__options {
     margin: 1.1rem 0 0.4rem;
+    display: grid;
+    gap: 1rem;
+  }
+  .tix.has-deal .tix__options {
+    grid-template-columns: 1fr 1fr;
+  }
+  @media (max-width: 640px) {
+    .tix.has-deal .tix__options {
+      grid-template-columns: 1fr;
+    }
+  }
+  .tix.has-deal .tix__buy,
+  .tix__deal {
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    border-radius: 10px;
+    padding: 1.1rem 1rem;
+    justify-content: center;
+  }
+  .tix__deal {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.7rem;
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+  .tix__badge {
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.7rem;
+    border-radius: 100px;
+  }
+  .tix__dealhead {
+    color: var(--accent);
+    font-size: 1.6rem;
+    font-weight: 800;
+    line-height: 1.1;
+    margin: 0;
+  }
+  .tix__choices {
+    display: flex;
+    gap: 0.6rem;
+  }
+  .tix__choices :global(.tix__choice) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 6.5rem;
+    padding: 0.55rem 0.8rem;
+    border-radius: 8px;
+    border: 1px solid var(--accent);
+    background: transparent;
+    color: var(--accent);
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .tix__choices :global(.tix__choice span) {
+    font-size: 0.9rem;
+    opacity: 0.85;
+  }
+  .tix__choices :global(.tix__choice[aria-checked='true']) {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  .tix__choices :global(.tix__choice:disabled) {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+  .tix__countdown {
+    margin: 0.6rem 0 0.2rem;
+  }
+  .tix__cdlabel {
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin: 0 0 0.4rem;
+  }
+  .tix__cd {
+    display: flex;
+    justify-content: center;
+    gap: 0.6rem;
+  }
+  .tix__cd span {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 3.6rem;
+    padding: 0.45rem 0.3rem;
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    border-radius: 8px;
+  }
+  .tix__cd strong {
+    color: var(--accent);
+    font-size: 1.7rem;
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .tix__cd small {
+    color: var(--muted);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 0.2rem;
+  }
+  .tix__extended {
+    color: var(--accent);
+    font-weight: 700;
+    margin: 0.4rem 0 0;
+  }
+  .tix__buy {
     display: flex;
     flex-direction: column;
     align-items: center;

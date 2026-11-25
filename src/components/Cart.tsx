@@ -8,6 +8,7 @@ import {
   cartSubtotal,
   lineKey,
 } from '../lib/cart';
+import { dealQtyStep } from '../lib/shows';
 import { formatOptions } from '../lib/bundleOptions';
 import { formatPrice } from '../lib/format';
 import type { CartItem } from '../lib/types';
@@ -95,11 +96,11 @@ export default function Cart() {
                         {it.variantLabel && <span className="cartline__variant">{it.variantLabel}</span>}
                         {opts && <span className="cartline__variant">{opts}</span>}
                         <div className="cartline__qty">
-                          <button aria-label="Decrease" onClick={() => updateQty(key, it.qty - 1)}>
+                          <button aria-label="Decrease" onClick={() => updateQty(key, dealQtyStep(it.productId, it.qty, -1) ?? it.qty - 1)}>
                             −
                           </button>
                           <span>{it.qty}</span>
-                          <button aria-label="Increase" onClick={() => updateQty(key, it.qty + 1)}>
+                          <button aria-label="Increase" onClick={() => updateQty(key, dealQtyStep(it.productId, it.qty, 1) ?? it.qty + 1)}>
                             +
                           </button>
                         </div>
